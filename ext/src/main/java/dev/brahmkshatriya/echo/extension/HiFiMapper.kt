@@ -4,6 +4,7 @@ import dev.brahmkshatriya.echo.common.models.Album
 import dev.brahmkshatriya.echo.common.models.Artist
 import dev.brahmkshatriya.echo.common.models.ImageHolder
 import dev.brahmkshatriya.echo.common.models.Playlist
+import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Track
 import kotlinx.serialization.json.JsonObject
@@ -143,4 +144,47 @@ object HiFiMapper {
             null
         }
     }
+
+    /**
+     * Parse search results into QuickSearchItem objects
+     * @param json Search response JSON
+     */
+    fun parseSearchResults(json: JsonObject): List<QuickSearchItem> {
+        val results = mutableListOf<QuickSearchItem>()
+        
+        try {
+            // Parse tracks
+            json["songs"]?.jsonArray?.forEach { item ->
+                parseTrack(item.jsonObject)?.let { track ->
+                    results.add(QuickSearchItem.Media(track, searched = true))
+                }
+            }
+            
+            // Parse artists
+            json["artists"]?.jsonArray?.forEach { item ->
+                parseArtist(item.jsonObject)?.let { artist ->
+                    results.add(QuickSearchItem.Media(artist, searched = true))
+                }
+            }
+            
+            // Parse albums
+            json["albums"]?.jsonArray?.forEach { item ->
+                parseAlbum(item.jsonObject)?.let { album ->
+                    results.add(QuickSearchItem.Media(album, searched = true))
+                }
+            }
+            
+            // Parse playlists
+            json["playlists"]?.jsonArray?.forEach { item ->
+                parsePlaylist(item.jsonObject)?.let { playlist ->
+                    results.add(QuickSearchItem.Media(playlist, searched = true))
+                }
+            }
+        } catch (e: Exception) {
+            println("Error parsing search results: ${e.message}")
+        }
+        
+        return results
+    }
 }
+

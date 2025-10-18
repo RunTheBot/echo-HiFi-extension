@@ -9,8 +9,10 @@ import dev.brahmkshatriya.echo.common.clients.TrackClient
 import dev.brahmkshatriya.echo.common.helpers.PagedData
 import dev.brahmkshatriya.echo.common.models.Album
 import dev.brahmkshatriya.echo.common.models.Artist
+import dev.brahmkshatriya.echo.common.models.EchoMediaItem
 import dev.brahmkshatriya.echo.common.models.Feed
 import dev.brahmkshatriya.echo.common.models.Playlist
+import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Tab
@@ -158,5 +160,44 @@ class TidalExtension :
             tabs = emptyList(),
             getPagedData = { Feed.Data(PagedData.Single { emptyList<Shelf>() }) }
         )
+    }
+
+    // ==================== Search Feed Client ====================
+
+    /**
+     * Search for tracks, artists, albums, and playlists
+     * Returns a Feed of QuickSearchItem containing search results
+     */
+    suspend fun searchFeed(query: String): Feed<QuickSearchItem> {
+        return Feed(
+            tabs = emptyList(),
+            getPagedData = { _: Tab? ->
+                val searchResults = performSearch(query)
+                Feed.Data(PagedData.Single { searchResults })
+            }
+        )
+    }
+
+    /**
+     * Perform search across all media types
+     * @param query Search query string
+     * @return List of QuickSearchItem results
+     */
+    private suspend fun performSearch(query: String): List<QuickSearchItem> {
+        if (query.isBlank()) {
+            return emptyList()
+        }
+
+        return try {
+            val response = hifiClient.searchAll(query, limit = 50)
+            if (response != null) {
+                HiFiMapper.parseSearchResults(response)
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            println("Error performing search: ${e.message}")
+            emptyList()
+        }
     }
 }

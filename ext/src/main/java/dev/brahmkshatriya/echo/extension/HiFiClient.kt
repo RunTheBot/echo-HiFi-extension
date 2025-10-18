@@ -145,6 +145,16 @@ class HiFiClient(
     }
 
     /**
+     * Search for all types (tracks, artists, albums) with pagination
+     * @param query Search query
+     * @param limit Maximum number of results per type
+     * @param offset Pagination offset
+     */
+    suspend fun searchAll(query: String, limit: Int = 25, offset: Int = 0): JsonObject? {
+        return get("/search/?q=${URLEncoder.encode(query, "UTF-8")}&li=$limit&o=$offset")
+    }
+
+    /**
      * Make a GET request and parse JSON response
      */
     private suspend fun get(path: String): JsonObject? {
