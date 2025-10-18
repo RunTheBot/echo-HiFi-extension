@@ -72,6 +72,12 @@ class TidalExtension :
     // ==================== TrackClient ====================
 
     override suspend fun loadTrack(track: Track, isDownload: Boolean): Track {
+        // If track already has streamables, return it as is
+        if (track.streamables.isNotEmpty()) {
+            return track
+        }
+        
+        // Otherwise fetch from HiFi API
         val trackData = hifiClient.getTrack(track.id.toLongOrNull() ?: 0)?.let {
             HiFiMapper.parseTrack(it)
         }
@@ -82,24 +88,37 @@ class TidalExtension :
         streamable: Streamable,
         isDownload: Boolean
     ): Streamable.Media {
-        // Get the track ID from streamable extras or ID
-        val trackId = streamable.extras["trackId"]?.toLongOrNull() 
-            ?: streamable.id.toLongOrNull() 
-            ?: throw Exception("Track ID not found in streamable")
-        
-        // Determine quality level
-        val quality = streamable.extras["quality"] ?: "LOSSLESS"
-        
-        // Fetch the DASH stream URL
-        val dashUrl = hifiClient.getDashStream(trackId, quality)
-            ?: throw Exception("Could not fetch stream from HiFi API for track: $trackId")
-        
-        // Return as DASH media
-        return dashUrl.toServerMedia(
-            headers = mapOf(),
-            type = Streamable.SourceType.DASH,
-            isVideo = false
-        )
+        try {
+            // Get the track ID from streamable extras or ID
+            val trackId = streamable.extras["trackId"]?.toLongOrNull() 
+                ?: streamable.id.substringBefore("-").toLongOrNull()
+                ?: throw Exception("Track ID not found in streamable: ${streamable.id}")
+            
+            // Determine quality level
+            val quality = streamable.extras["quality"] ?: "LOSSLESS"
+            
+            println("HiFi: Loading stream for track $trackId with quality $quality")
+            
+            // Fetch the DASH stream URL/manifest
+            val dashUrl = hifiClient.getDashStream(trackId, quality)
+            if (dashUrl == null) {
+                println("HiFi: Failed to get DASH stream - API returned null")
+                throw Exception("Could not fetch stream from HiFi API for track: $trackId with quality: $quality")
+            }
+            
+            println("HiFi: Got DASH manifest, length: ${dashUrl.length}")
+            
+            // Return as DASH media
+            return dashUrl.toServerMedia(
+                headers = mapOf(),
+                type = Streamable.SourceType.DASH,
+                isVideo = false
+            )
+        } catch (e: Exception) {
+            println("HiFi: Error in loadStreamableMedia: ${e.message}")
+            e.printStackTrace()
+            throw e
+        }
     }
 
     override suspend fun loadFeed(track: Track): Feed<Shelf>? {
