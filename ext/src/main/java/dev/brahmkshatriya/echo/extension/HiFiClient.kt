@@ -49,28 +49,34 @@ class HiFiClient(
     }
 
     /**
-     * Get track playback info
+     * Get track playback info and stream URL
      * @param trackId Track ID
      * @param quality Audio quality (LOW, HIGH, LOSSLESS, HI_RES, HI_RES_LOSSLESS)
+     * @return JsonObject containing audio quality info, manifest, and stream URL
      */
     suspend fun getTrack(trackId: Long, quality: String = "LOSSLESS"): JsonObject? {
         return get("/track/?id=$trackId&quality=$quality")
     }
 
     /**
-     * Get HiRes stream (returns JSON with URLs)
+     * Extract the stream URL from track data
      * @param trackId Track ID
-     * @param quality Quality level (HI_RES_LOSSLESS, HI_RES, LOSSLESS, HIGH, LOW)
+     * @param quality Audio quality
+     * @return The OriginalTrackUrl (FLAC file stream URL)
      */
-    suspend fun getStream(trackId: Long, quality: String = "LOSSLESS"): JsonObject? {
-        return get("/track/?id=$trackId&quality=$quality")
+    suspend fun getTrackStreamUrl(trackId: Long, quality: String = "LOSSLESS"): String? {
+        val response = getTrack(trackId, quality)
+        return response?.let { json ->
+            // The API returns an array, the third element contains the OriginalTrackUrl
+            json.entries.firstOrNull { it.key == "OriginalTrackUrl" }?.value?.jsonPrimitive?.content
+                ?: json["OriginalTrackUrl"]?.jsonPrimitive?.content
+        }
     }
 
     /**
-     * Get HiRes DASH stream (legacy method, now returns JSON)
+     * Get HiRes DASH stream
      * @param trackId Track ID
      * @param quality Quality level (HI_RES_LOSSLESS, DOLBY_ATMOS, SONY_360RA, MQA)
-     * @deprecated Use getStream() instead
      */
     suspend fun getDashStream(trackId: Long, quality: String = "HI_RES_LOSSLESS"): String? {
         return getRaw("/dash/?id=$trackId&quality=$quality")

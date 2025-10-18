@@ -18,6 +18,8 @@ import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Tab
 import dev.brahmkshatriya.echo.common.models.Track
+import dev.brahmkshatriya.echo.common.models.NetworkRequest.Companion.toGetRequest
+import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toMedia
 import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.Settings
 import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient
@@ -25,9 +27,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import dev.brahmkshatriya.echo.common.models.Streamable.SourceType
-import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toServerMedia
 
 import okhttp3.OkHttpClient
 import kotlin.collections.listOf
@@ -73,12 +72,6 @@ class TidalExtension :
     // ==================== TrackClient ====================
 
     override suspend fun loadTrack(track: Track, isDownload: Boolean): Track {
-        // If track already has streamables, return it as is
-        if (track.streamables.isNotEmpty()) {
-            return track
-        }
-        
-        // Otherwise fetch from HiFi API
         val trackData = hifiClient.getTrack(track.id.toLongOrNull() ?: 0)?.let {
             HiFiMapper.parseTrack(it)
         }
@@ -89,43 +82,35 @@ class TidalExtension :
         streamable: Streamable,
         isDownload: Boolean
     ): Streamable.Media {
-        try {
-            // Get the track ID from streamable extras or ID
-            val trackId = streamable.extras["trackId"]?.toLongOrNull() 
-                ?: streamable.id.substringBefore("-").toLongOrNull()
-                ?: throw Exception("Track ID not found in streamable: ${streamable.id}")
+        return withContext(Dispatchers.IO) {
+            val trackId = streamable.id.toLongOrNull()
+                ?: throw Exception("Invalid track ID: ${streamable.id}")
             
-            // Determine quality level
-            val quality = streamable.extras["quality"] ?: "LOSSLESS"
-            
-            println("HiFi: Loading stream for track $trackId with quality $quality")
-            
-            // Fetch the stream info from HiFi API
-            val streamJson = hifiClient.getStream(trackId, quality)
-                ?: throw Exception("Could not fetch stream from HiFi API for track: $trackId with quality: $quality")
-            
-            // Extract the stream URL from the JSON response
-            // Expected format: {"mimeType":"audio/flac","codecs":"flac","encryptionType":"NONE","urls":["https://..."]}
-            val urls = streamJson["urls"]?.jsonArray
-            if (urls == null || urls.isEmpty()) {
-                throw Exception("No stream URLs found in HiFi response for track: $trackId")
+            try {
+                // Determine quality preference
+                val quality = if (isDownload) "HI_RES_LOSSLESS" else "LOSSLESS"
+                
+                // Get the stream URL from HiFi API
+                val streamUrl = hifiClient.getTrackStreamUrl(trackId, quality)
+                    ?: throw Exception("Server not found - No stream URL available for track $trackId")
+                
+                // Create HTTP source for the stream URL using toGetRequest extension
+                val httpSource = Streamable.Source.Http(
+                    request = streamUrl.toGetRequest(),
+                    type = Streamable.SourceType.Progressive,
+                    decryption = null,
+                    quality = if (quality == "HI_RES_LOSSLESS") 320 else 256, // Quality in kbps
+                    title = null,
+                    isVideo = false,
+                    isLive = false
+                )
+                
+                // Convert source to Media.Server using toMedia extension
+                httpSource.toMedia()
+            } catch (e: Exception) {
+                println("Error loading stream for track $trackId: ${e.message}")
+                throw Exception("Server not found - Failed to load stream: ${e.message}")
             }
-            
-            val streamUrl = urls.firstOrNull()?.jsonPrimitive?.content
-                ?: throw Exception("Could not extract stream URL from HiFi response")
-            
-            println("HiFi: Got stream URL, length: ${streamUrl.length}")
-            
-            // Return as progressive media (direct stream URL)
-            return streamUrl.toServerMedia(
-                headers = mapOf(),
-                type = Streamable.SourceType.Progressive,
-                isVideo = false
-            )
-        } catch (e: Exception) {
-            println("HiFi: Error in loadStreamableMedia: ${e.message}")
-            e.printStackTrace()
-            throw e
         }
     }
 
