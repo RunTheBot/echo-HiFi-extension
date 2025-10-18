@@ -42,15 +42,19 @@ class HiFiSearchClient(
             try {
                 val response = hifiClient.searchAll(query, limit = 10)
                 if (response != null) {
-                    // Extract unique queries from results
+                    // Extract unique queries from results - all items are in "items" array
                     val suggestions = mutableSetOf<String>()
                     
                     // Add the original query
                     suggestions.add(query)
                     
-                    // Try to extract suggestions from response
-                    response["songs"]?.jsonArray?.take(3)?.forEach { item ->
-                        item.jsonObject["title"]?.jsonPrimitive?.content?.let {
+                    // Try to extract suggestions from response items (tracks and artists)
+                    response["items"]?.jsonArray?.take(3)?.forEach { item ->
+                        val itemObj = item.jsonObject
+                        // Try track title first, then artist name
+                        itemObj["title"]?.jsonPrimitive?.content?.let {
+                            suggestions.add(it)
+                        } ?: itemObj["name"]?.jsonPrimitive?.content?.let {
                             suggestions.add(it)
                         }
                     }
@@ -127,30 +131,42 @@ class HiFiSearchClient(
         val shelves = mutableListOf<Shelf>()
 
         try {
-            // Parse and group results by type
+            // Parse and group results by type from the items array
             val tracks = mutableListOf<dev.brahmkshatriya.echo.common.models.Track>()
             val artists = mutableListOf<dev.brahmkshatriya.echo.common.models.Artist>()
             val albums = mutableListOf<dev.brahmkshatriya.echo.common.models.Album>()
             val playlists = mutableListOf<dev.brahmkshatriya.echo.common.models.Playlist>()
 
-            // Parse tracks
-            response["songs"]?.jsonArray?.forEach { item ->
-                HiFiMapper.parseTrack(item.jsonObject)?.let { tracks.add(it) }
-            }
-
-            // Parse artists
-            response["artists"]?.jsonArray?.forEach { item ->
-                HiFiMapper.parseArtist(item.jsonObject)?.let { artists.add(it) }
-            }
-
-            // Parse albums
-            response["albums"]?.jsonArray?.forEach { item ->
-                HiFiMapper.parseAlbum(item.jsonObject)?.let { albums.add(it) }
-            }
-
-            // Parse playlists
-            response["playlists"]?.jsonArray?.forEach { item ->
-                HiFiMapper.parsePlaylist(item.jsonObject)?.let { playlists.add(it) }
+            // All items are mixed in the "items" array - need to discriminate by structure
+            response["items"]?.jsonArray?.forEach { item ->
+                val itemObj = item.jsonObject
+                
+                // Determine item type based on its structure
+                when {
+                    // Track: has duration, artists array, and album
+                    itemObj["duration"] != null && itemObj["artists"] != null && itemObj["album"] != null -> {
+                        HiFiMapper.parseTrack(itemObj)?.let { tracks.add(it) }
+                    }
+                    // Artist: has no duration/album, but has name and picture
+                    itemObj["duration"] == null && itemObj["album"] == null && itemObj["name"] != null -> {
+                        HiFiMapper.parseArtist(itemObj)?.let { artists.add(it) }
+                    }
+                    // Album: has title, cover, artists but no duration
+                    itemObj["duration"] == null && itemObj["cover"] != null && itemObj["artists"] != null -> {
+                        HiFiMapper.parseAlbum(itemObj)?.let { albums.add(it) }
+                    }
+                    // Playlist: has numberOfTracks or other playlist-specific fields
+                    itemObj["numberOfTracks"] != null || (itemObj["type"]?.jsonPrimitive?.content == "PLAYLIST") -> {
+                        HiFiMapper.parsePlaylist(itemObj)?.let { playlists.add(it) }
+                    }
+                    // Default: try track first, then others
+                    else -> {
+                        HiFiMapper.parseTrack(itemObj)?.let { tracks.add(it) }
+                            ?: HiFiMapper.parseArtist(itemObj)?.let { artists.add(it) }
+                            ?: HiFiMapper.parseAlbum(itemObj)?.let { albums.add(it) }
+                            ?: HiFiMapper.parsePlaylist(itemObj)?.let { playlists.add(it) }
+                    }
+                }
             }
 
             // Build shelves for all types (filtering happens per-tab later)
