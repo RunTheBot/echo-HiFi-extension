@@ -18,8 +18,6 @@ import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Tab
 import dev.brahmkshatriya.echo.common.models.Track
-import dev.brahmkshatriya.echo.common.models.NetworkRequest.Companion.toGetRequest
-import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toMedia
 import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.Settings
 import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient
@@ -82,36 +80,9 @@ class TidalExtension :
         streamable: Streamable,
         isDownload: Boolean
     ): Streamable.Media {
-        return withContext(Dispatchers.IO) {
-            val trackId = streamable.id.toLongOrNull()
-                ?: throw Exception("Invalid track ID: ${streamable.id}")
-            
-            try {
-                // Determine quality preference
-                val quality = if (isDownload) "HI_RES_LOSSLESS" else "LOSSLESS"
-                
-                // Get the stream URL from HiFi API
-                val streamUrl = hifiClient.getTrackStreamUrl(trackId, quality)
-                    ?: throw Exception("Server not found - No stream URL available for track $trackId")
-                
-                // Create HTTP source for the stream URL using toGetRequest extension
-                val httpSource = Streamable.Source.Http(
-                    request = streamUrl.toGetRequest(),
-                    type = Streamable.SourceType.Progressive,
-                    decryption = null,
-                    quality = if (quality == "HI_RES_LOSSLESS") 320 else 256, // Quality in kbps
-                    title = null,
-                    isVideo = false,
-                    isLive = false
-                )
-                
-                // Convert source to Media.Server using toMedia extension
-                httpSource.toMedia()
-            } catch (e: Exception) {
-                println("Error loading stream for track $trackId: ${e.message}")
-                throw Exception("Server not found - Failed to load stream: ${e.message}")
-            }
-        }
+        // For HiFi, we would need to fetch the actual stream URL
+        // For now, return empty to indicate not supported
+        throw Exception("Streamable media loading not yet implemented")
     }
 
     override suspend fun loadFeed(track: Track): Feed<Shelf>? {
@@ -135,10 +106,7 @@ class TidalExtension :
         } ?: emptyList()
 
         return if (tracks.isNotEmpty()) {
-            Feed(
-                tabs = emptyList(),
-                getPagedData = { Feed.Data(PagedData.Single { tracks }) }
-            )
+            Feed.Data(PagedData.Single { tracks }) as Feed<Track>
         } else {
             null
         }

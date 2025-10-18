@@ -49,28 +49,12 @@ class HiFiClient(
     }
 
     /**
-     * Get track playback info and stream URL
+     * Get track playback info
      * @param trackId Track ID
      * @param quality Audio quality (LOW, HIGH, LOSSLESS, HI_RES, HI_RES_LOSSLESS)
-     * @return JsonObject containing audio quality info, manifest, and stream URL
      */
     suspend fun getTrack(trackId: Long, quality: String = "LOSSLESS"): JsonObject? {
         return get("/track/?id=$trackId&quality=$quality")
-    }
-
-    /**
-     * Extract the stream URL from track data
-     * @param trackId Track ID
-     * @param quality Audio quality
-     * @return The OriginalTrackUrl (FLAC file stream URL)
-     */
-    suspend fun getTrackStreamUrl(trackId: Long, quality: String = "LOSSLESS"): String? {
-        val response = getTrack(trackId, quality)
-        return response?.let { json ->
-            // The API returns an array, the third element contains the OriginalTrackUrl
-            json.entries.firstOrNull { it.key == "OriginalTrackUrl" }?.value?.jsonPrimitive?.content
-                ?: json["OriginalTrackUrl"]?.jsonPrimitive?.content
-        }
     }
 
     /**
