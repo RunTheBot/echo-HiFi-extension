@@ -6,6 +6,7 @@ import dev.brahmkshatriya.echo.common.models.ImageHolder
 import dev.brahmkshatriya.echo.common.models.Playlist
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
+import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Track
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -46,6 +47,40 @@ object HiFiMapper {
                 null
             }
 
+            // Create streamable servers for different quality levels
+            val streamables = listOf(
+                Streamable.server(
+                    id = "$id-lossless",
+                    quality = 320,
+                    title = "LOSSLESS",
+                    extras = mapOf("trackId" to id, "quality" to "LOSSLESS")
+                ),
+                Streamable.server(
+                    id = "$id-hi-res",
+                    quality = 500,
+                    title = "HI_RES",
+                    extras = mapOf("trackId" to id, "quality" to "HI_RES")
+                ),
+                Streamable.server(
+                    id = "$id-hi-res-lossless",
+                    quality = 640,
+                    title = "HI_RES_LOSSLESS",
+                    extras = mapOf("trackId" to id, "quality" to "HI_RES_LOSSLESS")
+                ),
+                Streamable.server(
+                    id = "$id-high",
+                    quality = 160,
+                    title = "HIGH",
+                    extras = mapOf("trackId" to id, "quality" to "HIGH")
+                ),
+                Streamable.server(
+                    id = "$id-low",
+                    quality = 96,
+                    title = "LOW",
+                    extras = mapOf("trackId" to id, "quality" to "LOW")
+                )
+            )
+
             Track(
                 id = id,
                 title = title,
@@ -54,7 +89,8 @@ object HiFiMapper {
                     buildImageHolder(it)
                 },
                 album = album,
-                artists = artists
+                artists = artists,
+                streamables = streamables
             )
         } catch (e: Exception) {
             println("Error parsing track: ${e.message}")

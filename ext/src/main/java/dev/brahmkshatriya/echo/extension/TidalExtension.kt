@@ -25,6 +25,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import dev.brahmkshatriya.echo.common.models.Streamable.SourceType
+import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toServerMedia
 
 import okhttp3.OkHttpClient
 import kotlin.collections.listOf
@@ -80,9 +82,24 @@ class TidalExtension :
         streamable: Streamable,
         isDownload: Boolean
     ): Streamable.Media {
-        // For HiFi, we would need to fetch the actual stream URL
-        // For now, return empty to indicate not supported
-        throw Exception("Streamable media loading not yet implemented")
+        // Get the track ID from streamable extras or ID
+        val trackId = streamable.extras["trackId"]?.toLongOrNull() 
+            ?: streamable.id.toLongOrNull() 
+            ?: throw Exception("Track ID not found in streamable")
+        
+        // Determine quality level
+        val quality = streamable.extras["quality"] ?: "LOSSLESS"
+        
+        // Fetch the DASH stream URL
+        val dashUrl = hifiClient.getDashStream(trackId, quality)
+            ?: throw Exception("Could not fetch stream from HiFi API for track: $trackId")
+        
+        // Return as DASH media
+        return dashUrl.toServerMedia(
+            headers = mapOf(),
+            type = Streamable.SourceType.DASH,
+            isVideo = false
+        )
     }
 
     override suspend fun loadFeed(track: Track): Feed<Shelf>? {
@@ -106,7 +123,10 @@ class TidalExtension :
         } ?: emptyList()
 
         return if (tracks.isNotEmpty()) {
-            Feed.Data(PagedData.Single { tracks }) as Feed<Track>
+            Feed(
+                tabs = emptyList(),
+                getPagedData = { Feed.Data(PagedData.Single { tracks }) }
+            )
         } else {
             null
         }
