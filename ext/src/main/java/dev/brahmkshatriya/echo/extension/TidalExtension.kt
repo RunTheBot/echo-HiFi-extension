@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import dev.brahmkshatriya.echo.common.models.Streamable.SourceType
 import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toServerMedia
 
@@ -99,19 +100,26 @@ class TidalExtension :
             
             println("HiFi: Loading stream for track $trackId with quality $quality")
             
-            // Fetch the DASH stream URL/manifest
-            val dashUrl = hifiClient.getDashStream(trackId, quality)
-            if (dashUrl == null) {
-                println("HiFi: Failed to get DASH stream - API returned null")
-                throw Exception("Could not fetch stream from HiFi API for track: $trackId with quality: $quality")
+            // Fetch the stream info from HiFi API
+            val streamJson = hifiClient.getStream(trackId, quality)
+                ?: throw Exception("Could not fetch stream from HiFi API for track: $trackId with quality: $quality")
+            
+            // Extract the stream URL from the JSON response
+            // Expected format: {"mimeType":"audio/flac","codecs":"flac","encryptionType":"NONE","urls":["https://..."]}
+            val urls = streamJson["urls"]?.jsonArray
+            if (urls == null || urls.isEmpty()) {
+                throw Exception("No stream URLs found in HiFi response for track: $trackId")
             }
             
-            println("HiFi: Got DASH manifest, length: ${dashUrl.length}")
+            val streamUrl = urls.firstOrNull()?.jsonPrimitive?.content
+                ?: throw Exception("Could not extract stream URL from HiFi response")
             
-            // Return as DASH media
-            return dashUrl.toServerMedia(
+            println("HiFi: Got stream URL, length: ${streamUrl.length}")
+            
+            // Return as progressive media (direct stream URL)
+            return streamUrl.toServerMedia(
                 headers = mapOf(),
-                type = Streamable.SourceType.DASH,
+                type = Streamable.SourceType.Progressive,
                 isVideo = false
             )
         } catch (e: Exception) {

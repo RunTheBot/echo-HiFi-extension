@@ -58,9 +58,19 @@ class HiFiClient(
     }
 
     /**
-     * Get HiRes DASH stream
+     * Get HiRes stream (returns JSON with URLs)
+     * @param trackId Track ID
+     * @param quality Quality level (HI_RES_LOSSLESS, HI_RES, LOSSLESS, HIGH, LOW)
+     */
+    suspend fun getStream(trackId: Long, quality: String = "LOSSLESS"): JsonObject? {
+        return get("/track/?id=$trackId&quality=$quality")
+    }
+
+    /**
+     * Get HiRes DASH stream (legacy method, now returns JSON)
      * @param trackId Track ID
      * @param quality Quality level (HI_RES_LOSSLESS, DOLBY_ATMOS, SONY_360RA, MQA)
+     * @deprecated Use getStream() instead
      */
     suspend fun getDashStream(trackId: Long, quality: String = "HI_RES_LOSSLESS"): String? {
         return getRaw("/dash/?id=$trackId&quality=$quality")
