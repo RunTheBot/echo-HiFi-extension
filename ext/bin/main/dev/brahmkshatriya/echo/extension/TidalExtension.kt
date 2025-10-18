@@ -1,33 +1,162 @@
 package dev.brahmkshatriya.echo.extension
 
+import dev.brahmkshatriya.echo.common.clients.AlbumClient
+import dev.brahmkshatriya.echo.common.clients.ArtistClient
 import dev.brahmkshatriya.echo.common.clients.ExtensionClient
-import dev.brahmkshatriya.echo.common.helpers.ContinuationCallback.Companion.await
+import dev.brahmkshatriya.echo.common.clients.HomeFeedClient
+import dev.brahmkshatriya.echo.common.clients.PlaylistClient
+import dev.brahmkshatriya.echo.common.clients.TrackClient
+import dev.brahmkshatriya.echo.common.helpers.PagedData
+import dev.brahmkshatriya.echo.common.models.Album
+import dev.brahmkshatriya.echo.common.models.Artist
+import dev.brahmkshatriya.echo.common.models.Feed
+import dev.brahmkshatriya.echo.common.models.Playlist
+import dev.brahmkshatriya.echo.common.models.Shelf
+import dev.brahmkshatriya.echo.common.models.Streamable
+import dev.brahmkshatriya.echo.common.models.Tab
+import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.Settings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+
 import okhttp3.OkHttpClient
-import okhttp3.Request
+import kotlin.collections.listOf
 
-// For more information on which clients to use
-// visit https://brahmkshatriya.github.io/echo/common/dev.brahmkshatriya.echo.common/
-class TestExtension : ExtensionClient {
+/**
+ * Tidal HiFi Extension for Echo
+ * Provides access to Tidal music streaming via the HiFi API
+ * https://github.com/sachinsenal0x64/hifi
+ */
+class TidalExtension :
+    ExtensionClient,
+    TrackClient,
+    AlbumClient,
+    ArtistClient,
+    PlaylistClient,
+    HomeFeedClient {
 
-    // Hover the function to see their documentation, you can click on highlighted class names
-    // to see their documentation as well.
+    private lateinit var settings: Settings
+    private val hifiClient = HiFiClient()
+    private val httpClient = OkHttpClient()
+
     override suspend fun getSettingItems(): List<Setting> {
         return emptyList()
     }
 
-    // Every extension has its own settings instance
-    private lateinit var setting: Settings
     override fun setSettings(settings: Settings) {
-        setting = settings
+        this.settings = settings
     }
 
-    // Simple HTTP client usage example
-    private val httpClient = OkHttpClient()
     override suspend fun onInitialize() {
-        val request = Request.Builder().url("https://example.com").build()
-        val response = httpClient.newCall(request).await()
-        println("Response ${response.code}: ${response.body}")
+        // Initialize extension - verify API connectivity if needed
+        val testResponse = hifiClient.searchTracks("test", limit = 1)
+        if (testResponse == null) {
+            println("Warning: Could not reach HiFi API during initialization")
+        }
+    }
+
+    // ==================== TrackClient ====================
+
+    override suspend fun loadTrack(track: Track, isDownload: Boolean): Track {
+        val trackData = hifiClient.getTrack(track.id.toLongOrNull() ?: 0)?.let {
+            HiFiMapper.parseTrack(it)
+        }
+        return trackData ?: track
+    }
+
+    override suspend fun loadStreamableMedia(
+        streamable: Streamable,
+        isDownload: Boolean
+    ): Streamable.Media {
+        // For HiFi, we would need to fetch the actual stream URL
+        // For now, return empty to indicate not supported
+        throw Exception("Streamable media loading not yet implemented")
+    }
+
+    override suspend fun loadFeed(track: Track): Feed<Shelf>? {
+        // Track details/related content feed
+        return null
+    }
+
+    // ==================== AlbumClient ====================
+
+    override suspend fun loadAlbum(album: Album): Album {
+        val albumData = hifiClient.getAlbum(album.id.toLongOrNull() ?: 0)?.let {
+            HiFiMapper.parseAlbum(it)
+        }
+        return albumData ?: album
+    }
+
+    override suspend fun loadTracks(album: Album): Feed<Track>? {
+        val response = hifiClient.getAlbum(album.id.toLongOrNull() ?: 0) ?: return null
+        val tracks = response["items"]?.jsonArray?.mapNotNull { item ->
+            HiFiMapper.parseTrack(item.jsonObject)
+        } ?: emptyList()
+
+        return if (tracks.isNotEmpty()) {
+            Feed.Data(PagedData.Single { tracks }) as Feed<Track>
+        } else {
+            null
+        }
+    }
+
+    override suspend fun loadFeed(album: Album): Feed<Shelf>? {
+        return null
+    }
+
+    // ==================== ArtistClient ====================
+
+    override suspend fun loadArtist(artist: Artist): Artist {
+        val artistData = hifiClient.getArtist(artist.id.toLongOrNull() ?: 0)?.let {
+            HiFiMapper.parseArtist(it)
+        }
+        return artistData ?: artist
+    }
+
+    override suspend fun loadFeed(artist: Artist): Feed<Shelf> {
+        // Return empty feed for now
+        return Feed(
+            tabs = emptyList(),
+            getPagedData = { Feed.Data(PagedData.Single { emptyList<Shelf>() }) }
+        )
+    }
+
+    // ==================== PlaylistClient ====================
+
+    override suspend fun loadPlaylist(playlist: Playlist): Playlist {
+        val playlistData = hifiClient.getPlaylist(playlist.id)?.let { response ->
+            HiFiMapper.parsePlaylist(response)
+        }
+        return playlistData ?: playlist
+    }
+
+    override suspend fun loadTracks(playlist: Playlist): Feed<Track> {
+        val response = hifiClient.getPlaylist(playlist.id)
+        val tracks = response?.get("items")?.jsonArray?.mapNotNull { item ->
+            val trackObj = item.jsonObject["item"]?.jsonObject ?: return@mapNotNull null
+            HiFiMapper.parseTrack(trackObj)
+        } ?: emptyList()
+
+        return Feed(
+            tabs = emptyList(),
+            getPagedData = { Feed.Data(PagedData.Single { tracks }) }
+        )
+    }
+
+    override suspend fun loadFeed(playlist: Playlist): Feed<Shelf>? {
+        return null
+    }
+
+    // ==================== HomeFeedClient ====================
+
+    override suspend fun loadHomeFeed(): Feed<Shelf> {
+        // Return empty feed for now
+        return Feed(
+            tabs = emptyList(),
+            getPagedData = { Feed.Data(PagedData.Single { emptyList<Shelf>() }) }
+        )
     }
 }
