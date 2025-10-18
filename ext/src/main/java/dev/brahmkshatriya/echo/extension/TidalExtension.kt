@@ -20,6 +20,7 @@ import dev.brahmkshatriya.echo.common.models.Tab
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.Settings
+import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.jsonArray
@@ -45,6 +46,7 @@ class TidalExtension :
     private lateinit var settings: Settings
     private val hifiClient = HiFiClient()
     private val httpClient = OkHttpClient()
+    private lateinit var searchClient: HiFiSearchClient
 
     override suspend fun getSettingItems(): List<Setting> {
         return emptyList()
@@ -55,6 +57,9 @@ class TidalExtension :
     }
 
     override suspend fun onInitialize() {
+        // Initialize search client
+        searchClient = HiFiSearchClient(this, hifiClient)
+        
         // Initialize extension - verify API connectivity if needed
         val testResponse = hifiClient.searchTracks("test", limit = 1)
         if (testResponse == null) {
@@ -167,127 +172,23 @@ class TidalExtension :
     // ==================== QuickSearchClient ====================
 
     /**
-     * Quick search - returns list of recent/suggested queries
+     * Quick search - returns list of search suggestions
      */
     override suspend fun quickSearch(query: String): List<QuickSearchItem.Query> {
-        if (query.isBlank()) {
-            return emptyList()
-        }
-
-        return try {
-            // For now, just return the query itself as a suggestion
-            // In a real implementation, you might fetch from a history/suggestions API
-            listOf(
-                QuickSearchItem.Query(query = query, searched = false)
-            )
-        } catch (e: Exception) {
-            println("Error in quickSearch: ${e.message}")
-            emptyList()
-        }
+        return searchClient.quickSearch(query)
     }
 
     /**
      * Load search feed for a given query
      */
     override suspend fun loadSearchFeed(query: String): Feed<Shelf> {
-        return Feed(
-            tabs = emptyList(),
-            getPagedData = { _: Tab? ->
-                val searchResults = performSearchAsShelf(query)
-                Feed.Data(PagedData.Single { searchResults })
-            }
-        )
+        return searchClient.loadSearchFeed(query)
     }
 
     /**
-     * Delete quick search item (e.g., from history)
+     * Delete quick search item (for history management)
      */
     override suspend fun deleteQuickSearch(item: QuickSearchItem) {
-        // For HiFi API, we don't have a way to delete search history
-        // This could be implemented if the API supported it
-        try {
-            println("Delete quick search: ${item.title}")
-            // Placeholder for future implementation
-        } catch (e: Exception) {
-            println("Error deleting quick search: ${e.message}")
-        }
-    }
-
-    /**
-     * Perform search and convert results to Shelf objects
-     */
-    private suspend fun performSearchAsShelf(query: String): List<Shelf> {
-        if (query.isBlank()) {
-            return emptyList()
-        }
-
-        return try {
-            val response = hifiClient.searchAll(query, limit = 50)
-            if (response != null) {
-                val searchResults = HiFiMapper.parseSearchResults(response)
-                
-                // Convert QuickSearchItem results to Shelf objects for display
-                val shelves = mutableListOf<Shelf>()
-                
-                // Group results by type
-                val tracks = searchResults.filterIsInstance<QuickSearchItem.Media>()
-                    .mapNotNull { if (it.media is Track) it.media else null }
-                val artists = searchResults.filterIsInstance<QuickSearchItem.Media>()
-                    .mapNotNull { if (it.media is Artist) it.media else null }
-                val albums = searchResults.filterIsInstance<QuickSearchItem.Media>()
-                    .mapNotNull { if (it.media is Album) it.media else null }
-                val playlists = searchResults.filterIsInstance<QuickSearchItem.Media>()
-                    .mapNotNull { if (it.media is Playlist) it.media else null }
-                
-                // Create shelves for each type
-                if (tracks.isNotEmpty()) {
-                    @Suppress("UNCHECKED_CAST")
-                    shelves.add(
-                        Shelf.Lists.Tracks(
-                            id = "search_tracks",
-                            title = "Tracks",
-                            list = tracks as List<Track>
-                        )
-                    )
-                }
-                
-                if (artists.isNotEmpty()) {
-                    shelves.add(
-                        Shelf.Lists.Items(
-                            id = "search_artists",
-                            title = "Artists",
-                            list = artists
-                        )
-                    )
-                }
-                
-                if (albums.isNotEmpty()) {
-                    shelves.add(
-                        Shelf.Lists.Items(
-                            id = "search_albums",
-                            title = "Albums",
-                            list = albums
-                        )
-                    )
-                }
-                
-                if (playlists.isNotEmpty()) {
-                    shelves.add(
-                        Shelf.Lists.Items(
-                            id = "search_playlists",
-                            title = "Playlists",
-                            list = playlists
-                        )
-                    )
-                }
-                
-                shelves
-            } else {
-                emptyList()
-            }
-        } catch (e: Exception) {
-            println("Error performing search: ${e.message}")
-            emptyList()
-        }
+        searchClient.deleteQuickSearch(item)
     }
 }
