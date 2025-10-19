@@ -5,6 +5,7 @@ import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toServer
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.extension.HiFiAPI
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 
 
@@ -19,9 +20,10 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
         val trackJson = hiFiAPI.getTrack(trackId, quality)
 
         val sourceURL = try {
-            trackJson[0].jsonObject["OriginalTrackUrl"].toString()
+            trackJson[0].jsonObject["OriginalTrackUrl"]?.jsonPrimitive?.content
+                ?: throw IllegalStateException("OriginalTrackUrl not found")
         } catch (e : Exception){
-            throw Exception("Failed to extract source URL: ${e.message} sourceURL: $trackJson trackId: $trackId quality: $quality")
+            throw Exception("Failed to extract source URL: ${e.message} sourceJSON: $trackJson trackId: $trackId quality: $quality")
         }
 //        val dashUrl = hiFiAPI.getDashStreamUrl(trackId)
 
