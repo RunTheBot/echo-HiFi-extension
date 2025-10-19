@@ -3,6 +3,7 @@ package dev.brahmkshatriya.echo.extension.clients
 import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toServerMedia
 import dev.brahmkshatriya.echo.common.models.Track
+import dev.brahmkshatriya.echo.common.models.NetworkRequest
 import dev.brahmkshatriya.echo.extension.HiFiAPI
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -13,6 +14,16 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
     private val client by lazy { OkHttpClient() }
 
     private val qualityOptions = listOf("HI_RES_LOSSLESS", "LOSSLESS", "HIGH", "LOW")
+
+    private fun getQualityValue(quality: String): Int {
+        return when (quality) {
+            "HI_RES_LOSSLESS" -> 9
+            "LOSSLESS" -> 6
+            "HIGH" -> 3
+            "LOW" -> 0
+            else -> 0
+        }
+    }
 
     suspend fun loadStreamableMedia(streamable: Streamable): Streamable.Media {
         val quality = streamable.extras["QUALITY"] ?: "LOW"
@@ -28,18 +39,18 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
 //        val dashUrl = hiFiAPI.getDashStreamUrl(trackId)
 
 
-
-
         return try {
-
-//            dashUrl.toServerMedia(
-//                type = Streamable.SourceType.DASH
-//            )
-            sourceURL.toServerMedia(
+            val audioSource = Streamable.Source.Http(
+                request = NetworkRequest(url = sourceURL),
                 type = Streamable.SourceType.Progressive,
-                isVideo = false,
+                quality = getQualityValue(quality),
+                title = "Audio - $quality"
             )
 
+            Streamable.Media.Server(
+                sources = listOf(audioSource),
+                merged = false
+            )
         } catch (e: Exception){
             throw Exception("Failed to parse streamable media: ${e.message} source: $sourceURL " +
                     "trackId: $trackId quality: $quality")
