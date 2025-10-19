@@ -51,7 +51,7 @@ class HiFiAPI(
      * @param trackId Track ID
      * @param quality Audio quality (LOW, HIGH, LOSSLESS, HI_RES, HI_RES_LOSSLESS)
      */
-    suspend fun getTrack(trackId: Long, quality: String = "LOSSLESS"): JsonObject? {
+    suspend fun getTrack(trackId: Long, quality: String = "LOSSLESS"): JsonObject {
         return get("/track/?id=$trackId&quality=$quality")
     }
 
@@ -155,22 +155,21 @@ class HiFiAPI(
     /**
      * Make a GET request and parse JSON response
      */
-    private suspend fun get(path: String): JsonObject? {
+    private suspend fun get(path: String): JsonObject {
         return try {
             val url = apiUrl + path
             val request = Request.Builder().url(url).build()
             val response = httpClient.newCall(request).await()
 
             if (!response.isSuccessful) {
-                println("HiFi API Error: ${response.code} - $path")
-                return null
+                throw Exception("HiFi API Error: ${response.code} - $url")
             }
 
-            val body = response.body?.string() ?: return null
-            kotlinx.serialization.json.Json.parseToJsonElement(body).jsonObject
+            val body = response.body?.string() ?: throw Exception("Failed to load response body from HiFi API: $url")
+            kotlinx.serialization.json.Json.parseToJsonElement(body).jsonObject ?: throw Exception("Failed to parse JSON from HiFi API: $url")
         } catch (e: Exception) {
             println("HiFi API Exception: ${e.message}")
-            null
+            throw e
         }
     }
 

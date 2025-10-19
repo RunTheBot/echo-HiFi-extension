@@ -15,7 +15,7 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
     suspend fun loadStreamableMedia(streamable: Streamable): Streamable.Media {
         val quality = streamable.extras["QUALITY"] ?: "LOW"
         val trackId = streamable.id.removePrefix(placeholderPrefix).substringBefore(":").toLong()
-        val trackJson = hiFiAPI.getTrack(trackId, quality) ?: throw Exception("Failed to load track from HiFi API")
+        val trackJson = hiFiAPI.getTrack(trackId, quality)
         val sourceURL = trackJson.jsonArray[1].jsonObject["originalTrack"].toString()
 
 
