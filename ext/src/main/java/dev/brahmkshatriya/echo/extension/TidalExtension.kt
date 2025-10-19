@@ -77,7 +77,8 @@ class TidalExtension :
     ): Streamable.Media {
         // For HiFi, we would need to fetch the actual stream URL
         // For now, return empty to indicate not supported
-        throw Exception("Streamable media loading not yet implemented")
+//        throw Exception("Streamable media loading not yet implemented")
+        return hiFiTrackClient.loadStreamableMedia(streamable)
     }
 
     override suspend fun loadFeed(track: Track): Feed<Shelf>? {
