@@ -168,7 +168,7 @@ class HiFiAPI(
             val body = response.body?.string() ?: throw Exception("Failed to load response body from HiFi API: $url")
             kotlinx.serialization.json.Json.parseToJsonElement(body).jsonObject ?: throw Exception("Failed to parse JSON from HiFi API: $url")
         } catch (e: Exception) {
-            println("HiFi API Exception: ${e.message}")
+            println("${e.message}")
             throw e
         }
     }
