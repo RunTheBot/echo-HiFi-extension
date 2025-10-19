@@ -53,8 +53,8 @@ class HiFiAPI(
      * @param trackId Track ID
      * @param quality Audio quality (LOW, HIGH, LOSSLESS, HI_RES, HI_RES_LOSSLESS)
      */
-    suspend fun getTrack(trackId: Long, quality: String = "LOSSLESS"): JsonObject {
-        return get("/track/?id=$trackId&quality=$quality")
+    suspend fun getTrack(trackId: Long, quality: String = "LOSSLESS"): JsonArray {
+        return getArray("/track/?id=$trackId&quality=$quality")
     }
 
     /**
