@@ -62,8 +62,8 @@ class HiFiAPI(
      * @param trackId Track ID
      * @param quality Quality level (HI_RES_LOSSLESS, DOLBY_ATMOS, SONY_360RA, MQA)
      */
-    suspend fun getDashStream(trackId: Long, quality: String = "HI_RES_LOSSLESS"): String? {
-        return getRaw("/dash/?id=$trackId&quality=$quality")
+    suspend fun getDashStreamUrl(trackId: Long, quality: String = "HI_RES_LOSSLESS"): String {
+        return "$apiUrl/dash/?id=$trackId&quality=$quality"
     }
 
     /**
