@@ -4,6 +4,7 @@ import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toServerMedia
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.extension.HiFiAPI
+import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
 
 
@@ -15,26 +16,30 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
     suspend fun loadStreamableMedia(streamable: Streamable): Streamable.Media {
         val quality = streamable.extras["QUALITY"] ?: "LOW"
         val trackId = streamable.id.removePrefix(placeholderPrefix).substringBefore(":").toLong()
-//        val trackJson = hiFiAPI.getTrack(trackId, quality)
-//
-//        val sourceURL = try {
-//            trackJson[0].jsonObject["originalTrack"].toString()
-//        } catch (e : Exception){
-//            throw Exception("Failed to extract source URL: ${e.message} sourceURL: $trackJson trackId: $trackId quality: $quality")
-//        }
-        val dashUrl = hiFiAPI.getDashStreamUrl(trackId)
+        val trackJson = hiFiAPI.getTrack(trackId, quality)
+
+        val sourceURL = try {
+            trackJson[0].jsonObject["originalTrack"].toString()
+        } catch (e : Exception){
+            throw Exception("Failed to extract source URL: ${e.message} sourceURL: $trackJson trackId: $trackId quality: $quality")
+        }
+//        val dashUrl = hiFiAPI.getDashStreamUrl(trackId)
 
 
 
 
         return try {
 
-            dashUrl.toServerMedia(
-                type = Streamable.SourceType.DASH
+//            dashUrl.toServerMedia(
+//                type = Streamable.SourceType.DASH
+//            )
+            sourceURL.toServerMedia(
+                type = Streamable.SourceType.Progressive,
+                isVideo = false,
             )
 
         } catch (e: Exception){
-            throw Exception("Failed to parse streamable media: ${e.message} dashURL: $dashUrl " +
+            throw Exception("Failed to parse streamable media: ${e.message} source: $sourceURL " +
                     "trackId: $trackId quality: $quality")
         }
 
