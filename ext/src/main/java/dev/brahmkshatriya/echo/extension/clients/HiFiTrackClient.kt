@@ -18,6 +18,8 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
         val trackJson = hiFiAPI.getTrack(trackId, quality) ?: throw Exception("Failed to load track from HiFi API")
         val sourceURL = trackJson.jsonArray[1].jsonObject["originalTrack"].toString()
 
+        throw Exception(sourceURL);
+
         return sourceURL.toSource().toMedia()
 
     }
