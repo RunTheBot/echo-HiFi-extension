@@ -55,6 +55,8 @@ class TidalExtension :
     override suspend fun onInitialize() {
         // Initialize search client
         searchClient = HiFiSearchClient(this, hiFiAPI)
+
+        logMessage("Tidal HiFi Extension initialized")
         
         // Initialize extension - verify API connectivity if needed
 //        hiFiAPI.searchTracks("test", limit = 1)

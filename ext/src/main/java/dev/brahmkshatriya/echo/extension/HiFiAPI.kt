@@ -1,6 +1,7 @@
 package dev.brahmkshatriya.echo.extension
 
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
@@ -14,6 +15,7 @@ const val DASH_MANIFEST_UNAVAILABLE_CODE = "DASH_UNAVAILABLE"
 
 typealias RegionOption = String
 typealias AudioQuality = String
+
 
 /**
  * Lossless API Client
@@ -51,6 +53,8 @@ class HiFiAPI(
         val section = findSearchSection<T>(data, key, mutableSetOf())
         return buildSearchResponse<T>(section)
     }
+
+
 
     private fun <T> buildSearchResponse(
         section: JsonObject?
@@ -97,6 +101,7 @@ class HiFiAPI(
         visited.add(source)
 
         if (source.containsKey("items") && source["items"] is JsonArray) {
+            logMessage("Found items array while searching for key '$key'")
             return source
         }
 
@@ -119,6 +124,10 @@ class HiFiAPI(
         // If artist is null but artists list exists, use first artist
         if (normalized.artist == null && normalized.artists.isNotEmpty()) {
             normalized = normalized.copy(artist = normalized.artists[0])
+        }
+        // and the opposite: if artists list is empty but artist exists, use artist as sole entry
+        if (normalized.artists.isEmpty() && normalized.artist != null) {
+            normalized = normalized.copy(artists = listOf(normalized.artist))
         }
         return normalized
     }
@@ -283,15 +292,16 @@ class HiFiAPI(
         ensureNotRateLimited(response)
         if (!response.isSuccessful) throw Exception("Failed to search tracks")
         val data = response.body.string()
-        val json = kotlinx.serialization.json.Json.parseToJsonElement(data) as JsonObject
+        val json = Json.parseToJsonElement(data) as JsonObject
         val normalized = normalizeSearchResponse<JsonObject>(json, "tracks")
-        val deserializedItems = normalized.items.mapNotNull { item ->
+        val deserializedItems = normalized.items.map { item ->
             try {
-                prepareTrack(kotlinx.serialization.json.Json.decodeFromJsonElement<APITrack>(item as JsonElement))
+                prepareTrack(Json.decodeFromJsonElement<APITrack>(item))
             } catch (e: Exception) {
-                null
+                throw e
             }
         }
+        logMessage("deserializedItems: $deserializedItems")
         return SearchResponse(
             items = deserializedItems,
             limit = normalized.limit,
@@ -310,11 +320,11 @@ class HiFiAPI(
         val data = response.body.string()
         val json = kotlinx.serialization.json.Json.parseToJsonElement(data) as JsonObject
         val normalized = normalizeSearchResponse<JsonObject>(json, "artists")
-        val deserializedItems = normalized.items.mapNotNull { item ->
+        val deserializedItems = normalized.items.map { item ->
             try {
                 prepareArtist(kotlinx.serialization.json.Json.decodeFromJsonElement<APIArtist>(item as JsonElement))
             } catch (e: Exception) {
-                null
+                throw e
             }
         }
         return SearchResponse(
@@ -335,11 +345,11 @@ class HiFiAPI(
         val data = response.body.string()
         val json = kotlinx.serialization.json.Json.parseToJsonElement(data) as JsonObject
         val normalized = normalizeSearchResponse<JsonObject>(json, "albums")
-        val deserializedItems = normalized.items.mapNotNull { item ->
+        val deserializedItems = normalized.items.map { item ->
             try {
-                prepareAlbum(kotlinx.serialization.json.Json.decodeFromJsonElement<APIAlbum>(item as JsonElement))
+                prepareAlbum(Json.decodeFromJsonElement<APIAlbum>(item))
             } catch (e: Exception) {
-                null
+                throw e
             }
         }
         return SearchResponse(
@@ -360,11 +370,11 @@ class HiFiAPI(
         val data = response.body.string()
         val json = kotlinx.serialization.json.Json.parseToJsonElement(data) as JsonObject
         val normalized = normalizeSearchResponse<JsonObject>(json, "playlists")
-        val deserializedItems = normalized.items.mapNotNull { item ->
+        val deserializedItems = normalized.items.map { item ->
             try {
-                kotlinx.serialization.json.Json.decodeFromJsonElement<APIPlaylist>(item as JsonElement)
+                Json.decodeFromJsonElement<APIPlaylist>(item)
             } catch (e: Exception) {
-                null
+                throw e
             }
         }
         return SearchResponse(
@@ -634,15 +644,21 @@ interface TrackLookup {
     val originalTrackUrl: String?
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonIgnoreUnknownKeys
 data class APITrack(
     val id: Long,
     val title: String,
     val duration: Long,
-    val replayGain: Long? = null,
-    val peak: Long? = null,
+    val replayGain: Float? = null,
+    val peak: Float? = null,
     val allowStreaming: Boolean = true,
     val streamReady: Boolean = true,
+    val payToStream: Boolean = false,
+    val adSupportedStreamReady: Boolean = false,
+    val djReady: Boolean = false,
+    val stemReady: Boolean = false,
     val streamStartDate: String? = null,
     val premiumStreamingOnly: Boolean = false,
     val trackNumber: Long = 0,
@@ -650,28 +666,37 @@ data class APITrack(
     val version: String? = null,
     val popularity: Long = 0,
     val copyright: String? = null,
+    val bpm: Int? = null,
     val url: String = "",
     val isrc: String? = null,
     val editable: Boolean = false,
     val explicit: Boolean = false,
     val audioQuality: String = "LOSSLESS",
     val audioModes: List<String> = emptyList(),
+    val upload: Boolean = false,
+    val accessType: String? = null,
+    val spotlighted: Boolean = false,
     val artist: APIArtist? = null,
-    val artists: List<APIArtist> = emptyList(),
+    val artists: List<APIArtist>,
     val album: APIAlbum? = null,
     val mixes: Map<String, String>? = null,
     val mediaMetadata: MediaMetadata? = null
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonIgnoreUnknownKeys
 data class MediaMetadata(
     val tags: List<String>
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonIgnoreUnknownKeys
 data class APIArtist(
     val id: Long,
     val name: String,
+    val handle: String? = null,
     val type: String? = null,
     val picture: String? = null,
     val url: String? = null,
@@ -681,13 +706,17 @@ data class APIArtist(
     val mixes: Map<String, String>? = null
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonIgnoreUnknownKeys
 data class ArtistRole(
     val category: String,
     val categoryId: Long
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonIgnoreUnknownKeys
 data class APIAlbum(
     val id: Long,
     val title: String,
@@ -704,7 +733,7 @@ data class APIAlbum(
     val upc: String? = null,
     val copyright: String? = null,
     val artist: APIArtist? = null,
-    val artists: List<APIArtist>,
+    val artists: List<APIArtist> = emptyList(),
     val audioQuality: String? = null,
     val audioModes: List<String>? = null,
     val url: String? = null,
@@ -714,19 +743,28 @@ data class APIAlbum(
     val mediaMetadata: MediaMetadata? = null
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonIgnoreUnknownKeys
 data class APIPlaylist(
-    val id: String,
+    val uuid: String,
     val title: String,
     val description: String? = null,
-    val cover: String? = null,
     val numberOfTracks: Long? = null,
     val numberOfVideos: Long? = null,
+    val creator: JsonObject? = null,
     val duration: Long? = null,
-    val isPublic: Boolean = false,
     val created: String? = null,
     val lastUpdated: String? = null,
-    val url: String? = null
+    val type: String? = null,
+    val publicPlaylist: Boolean = false,
+    val url: String? = null,
+    val image: String? = null,
+    val popularity: Long? = null,
+    val squareImage: String? = null,
+    val customImageUrl: String? = null,
+    val promotedArtists: List<APIArtist> = emptyList(),
+    val lastItemAddedAt: String? = null
 )
 
 interface TrackInfo {

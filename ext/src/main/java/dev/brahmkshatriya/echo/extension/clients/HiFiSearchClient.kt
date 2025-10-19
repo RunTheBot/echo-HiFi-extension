@@ -109,7 +109,7 @@ class HiFiSearchClient(
             return filteredShelves.toFeedData()
         } catch (e: Exception) {
             logMessage("Error performing search: ${e.message}")
-            return emptyList<Shelf>().toFeedData()
+            throw error("Error performing search: ${e.message}")
         }
     }
 
@@ -119,8 +119,8 @@ class HiFiSearchClient(
     private suspend fun performCombinedSearch(query: String): List<Shelf> {
         val shelves = mutableListOf<Shelf>()
         
+        // Search for tracks
         try {
-            // Search for tracks
             val tracksResponse = hifiClient.searchTracks(query, limit = 50)
             if (tracksResponse.items.isNotEmpty()) {
                 shelves.add(
@@ -131,21 +131,31 @@ class HiFiSearchClient(
                     )
                 )
             }
-            
-            // Search for artists
-            val artistsResponse = hifiClient.searchArtists(query)
-            if (artistsResponse.items.isNotEmpty()) {
-                @Suppress("UNCHECKED_CAST")
-                shelves.add(
-                    Shelf.Lists.Items(
-                        id = "search_artists",
-                        title = "Artists",
-                        list = artistsResponse.items.map { HiFiMapper.parseArtist(it) } as List<dev.brahmkshatriya.echo.common.models.EchoMediaItem>
-                    )
-                )
-            }
-            
-            // Search for albums
+        } catch (e: Exception) {
+            logMessage("Error searching tracks: ${e.message}")
+        }
+
+        // TODO: Enable artist search when debugged
+        
+//        // Search for artists
+//        try {
+//            val artistsResponse = hifiClient.searchArtists(query)
+//            if (artistsResponse.items.isNotEmpty()) {
+//                @Suppress("UNCHECKED_CAST")
+//                shelves.add(
+//                    Shelf.Lists.Items(
+//                        id = "search_artists",
+//                        title = "Artists",
+//                        list = artistsResponse.items.map { HiFiMapper.parseArtist(it) } as List<dev.brahmkshatriya.echo.common.models.EchoMediaItem>
+//                    )
+//                )
+//            }
+//        } catch (e: Exception) {
+//            logMessage("Error searching artists: ${e.message}")
+//        }
+
+        // Search for albums
+        try {
             val albumsResponse = hifiClient.searchAlbums(query)
             if (albumsResponse.items.isNotEmpty()) {
                 @Suppress("UNCHECKED_CAST")
@@ -159,8 +169,12 @@ class HiFiSearchClient(
                     )
                 )
             }
-            
-            // Search for playlists
+        } catch (e: Exception) {
+            logMessage("Error searching albums: ${e.message}")
+        }
+
+        // Search for playlists
+        try {
             val playlistsResponse = hifiClient.searchPlaylists(query)
             if (playlistsResponse.items.isNotEmpty()) {
                 @Suppress("UNCHECKED_CAST")
@@ -173,7 +187,7 @@ class HiFiSearchClient(
                 )
             }
         } catch (e: Exception) {
-            logMessage("Error in combined search: ${e.message}")
+            logMessage("Error searching playlists: ${e.message}")
         }
         
         return shelves

@@ -106,35 +106,14 @@ object HiFiMapper {
      */
     fun parsePlaylist(apiPlaylist: APIPlaylist): Playlist {
         return Playlist(
-            id = apiPlaylist.id,
+            id = apiPlaylist.uuid,
             title = apiPlaylist.title,
             isEditable = false,
             description = apiPlaylist.description,
-            cover = apiPlaylist.cover?.let { buildImageHolder(it) }
+            cover = apiPlaylist.squareImage?.let { buildImageHolder(it) }
         )
     }
 
-    /**
-     * Parse playlist from HiFi API response (JsonObject)
-     */
-    fun parsePlaylist(json: JsonObject): Playlist? {
-        return try {
-            val id = json["uuid"]?.jsonPrimitive?.content ?: json["id"]?.jsonPrimitive?.content ?: return null
-            val title = json["title"]?.jsonPrimitive?.content ?: "Unknown Playlist"
-            val description = json["description"]?.jsonPrimitive?.content
-
-            Playlist(
-                id = id,
-                title = title,
-                isEditable = false,
-                description = description,
-                cover = json["image"]?.jsonPrimitive?.content?.let { buildImageHolder(it) }
-            )
-        } catch (e: Exception) {
-            logMessage("Error parsing playlist: ${e.message}")
-            null
-        }
-    }
 
     /**
      * Build ImageHolder from UUID (Tidal uses UUID for images)
