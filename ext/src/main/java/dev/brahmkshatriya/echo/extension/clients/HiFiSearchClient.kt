@@ -1,13 +1,11 @@
 package dev.brahmkshatriya.echo.extension.clients
 
-import dev.brahmkshatriya.echo.common.helpers.PagedData
 import dev.brahmkshatriya.echo.common.models.Feed
-import dev.brahmkshatriya.echo.common.models.Feed.Companion.toFeed
 import dev.brahmkshatriya.echo.common.models.Feed.Companion.toFeedData
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Tab
-import dev.brahmkshatriya.echo.extension.HiFiClient
+import dev.brahmkshatriya.echo.extension.HiFiAPI
 import dev.brahmkshatriya.echo.extension.HiFiMapper
 import dev.brahmkshatriya.echo.extension.TidalExtension
 import kotlinx.serialization.json.jsonArray
@@ -20,7 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class HiFiSearchClient(
     private val tidalExtension: TidalExtension,
-    private val hifiClient: HiFiClient
+    private val hifiClient: HiFiAPI
 ) {
 
     @Volatile

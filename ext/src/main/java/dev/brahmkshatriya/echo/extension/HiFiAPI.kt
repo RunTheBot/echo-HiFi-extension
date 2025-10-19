@@ -5,15 +5,13 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
 import java.net.URLEncoder
 
 /**
  * HiFi API Client
  * Provides access to Tidal via the HiFi API (https://github.com/sachinsenal0x64/hifi)
  */
-class HiFiClient(
+class HiFiAPI(
     private val apiUrl: String = "https://tidal.401658.xyz",
     private val httpClient: OkHttpClient = OkHttpClient()
 ) {

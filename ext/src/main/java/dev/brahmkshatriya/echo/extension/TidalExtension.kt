@@ -10,24 +10,20 @@ import dev.brahmkshatriya.echo.common.clients.TrackClient
 import dev.brahmkshatriya.echo.common.helpers.PagedData
 import dev.brahmkshatriya.echo.common.models.Album
 import dev.brahmkshatriya.echo.common.models.Artist
-import dev.brahmkshatriya.echo.common.models.EchoMediaItem
 import dev.brahmkshatriya.echo.common.models.Feed
 import dev.brahmkshatriya.echo.common.models.Playlist
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Streamable
-import dev.brahmkshatriya.echo.common.models.Tab
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.Settings
 import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import dev.brahmkshatriya.echo.extension.clients.HiFiTrackClient
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 import okhttp3.OkHttpClient
-import kotlin.collections.listOf
 
 /**
  * Tidal HiFi Extension for Echo
@@ -44,7 +40,7 @@ class TidalExtension :
     QuickSearchClient {
 
     private lateinit var settings: Settings
-    private val hifiClient = HiFiClient()
+    private val hiFiAPI = HiFiAPI()
     private val httpClient = OkHttpClient()
     private lateinit var searchClient: HiFiSearchClient
 
@@ -58,10 +54,10 @@ class TidalExtension :
 
     override suspend fun onInitialize() {
         // Initialize search client
-        searchClient = HiFiSearchClient(this, hifiClient)
+        searchClient = HiFiSearchClient(this, hiFiAPI)
         
         // Initialize extension - verify API connectivity if needed
-        val testResponse = hifiClient.searchTracks("test", limit = 1)
+        val testResponse = hiFiAPI.searchTracks("test", limit = 1)
         if (testResponse == null) {
             println("Warning: Could not reach HiFi API during initialization")
         }
@@ -69,11 +65,10 @@ class TidalExtension :
 
     // ==================== TrackClient ====================
 
+    private val hiFiTrackClient by lazy { HiFiTrackClient(hiFiAPI) }
+
     override suspend fun loadTrack(track: Track, isDownload: Boolean): Track {
-        val trackData = hifiClient.getTrack(track.id.toLongOrNull() ?: 0)?.let {
-            HiFiMapper.parseTrack(it)
-        }
-        return trackData ?: track
+        return hiFiTrackClient.loadTrack(track)
     }
 
     override suspend fun loadStreamableMedia(
@@ -93,14 +88,14 @@ class TidalExtension :
     // ==================== AlbumClient ====================
 
     override suspend fun loadAlbum(album: Album): Album {
-        val albumData = hifiClient.getAlbum(album.id.toLongOrNull() ?: 0)?.let {
+        val albumData = hiFiAPI.getAlbum(album.id.toLongOrNull() ?: 0)?.let {
             HiFiMapper.parseAlbum(it)
         }
         return albumData ?: album
     }
 
     override suspend fun loadTracks(album: Album): Feed<Track>? {
-        val response = hifiClient.getAlbum(album.id.toLongOrNull() ?: 0) ?: return null
+        val response = hiFiAPI.getAlbum(album.id.toLongOrNull() ?: 0) ?: return null
         val tracks = response["items"]?.jsonArray?.mapNotNull { item ->
             HiFiMapper.parseTrack(item.jsonObject)
         } ?: emptyList()
@@ -119,7 +114,7 @@ class TidalExtension :
     // ==================== ArtistClient ====================
 
     override suspend fun loadArtist(artist: Artist): Artist {
-        val artistData = hifiClient.getArtist(artist.id.toLongOrNull() ?: 0)?.let {
+        val artistData = hiFiAPI.getArtist(artist.id.toLongOrNull() ?: 0)?.let {
             HiFiMapper.parseArtist(it)
         }
         return artistData ?: artist
@@ -136,14 +131,14 @@ class TidalExtension :
     // ==================== PlaylistClient ====================
 
     override suspend fun loadPlaylist(playlist: Playlist): Playlist {
-        val playlistData = hifiClient.getPlaylist(playlist.id)?.let { response ->
+        val playlistData = hiFiAPI.getPlaylist(playlist.id)?.let { response ->
             HiFiMapper.parsePlaylist(response)
         }
         return playlistData ?: playlist
     }
 
     override suspend fun loadTracks(playlist: Playlist): Feed<Track> {
-        val response = hifiClient.getPlaylist(playlist.id)
+        val response = hiFiAPI.getPlaylist(playlist.id)
         val tracks = response?.get("items")?.jsonArray?.mapNotNull { item ->
             val trackObj = item.jsonObject["item"]?.jsonObject ?: return@mapNotNull null
             HiFiMapper.parseTrack(trackObj)
