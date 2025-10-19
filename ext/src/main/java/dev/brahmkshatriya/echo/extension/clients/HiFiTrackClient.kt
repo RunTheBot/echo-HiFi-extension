@@ -31,10 +31,18 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
         val trackJson = hiFiAPI.getTrack(trackId, quality)
 
         val sourceURL = try {
+            // Log the entire response to debug
+            println("HiFiTrackClient - Full Response: $trackJson")
+            
+            // Try to get OriginalTrackUrl from the array
             val url = trackJson.firstNotNullOfOrNull { item ->
-                item.jsonObject["OriginalTrackUrl"]?.jsonPrimitive?.content
-            } ?: throw IllegalStateException("OriginalTrackUrl not found in any element")
-            url
+                val obj = item.jsonObject
+                obj["OriginalTrackUrl"]?.jsonPrimitive?.content.also { 
+                    if (it != null) println("HiFiTrackClient - Found URL: $it")
+                }
+            }
+            
+            url ?: throw IllegalStateException("OriginalTrackUrl not found in any element. Response: $trackJson")
         } catch (e : Exception){
             throw Exception("Failed to extract source URL: ${e.message} sourceJSON: $trackJson trackId: $trackId quality: $quality")
         }
