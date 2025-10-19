@@ -16,12 +16,20 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
         val quality = streamable.extras["QUALITY"] ?: "LOW"
         val trackId = streamable.id.removePrefix(placeholderPrefix).substringBefore(":").toLong()
         val trackJson = hiFiAPI.getTrack(trackId, quality)
-        val sourceURL = trackJson.jsonArray[1].jsonObject["originalTrack"].toString()
+
+        val sourceURL = try {
+            trackJson["1"]?.jsonObject["originalTrack"].toString()
+        } catch (e : Exception){
+            throw Exception("Failed to extract source URL: ${e.message} sourceURL: $trackJson trackId: $trackId quality: $quality")
+        }
 
 
 
-        return try{ sourceURL.toSource().toMedia() }
-        catch (e: Exception){
+
+        return try {
+
+            sourceURL.toSource().toMedia()
+        } catch (e: Exception){
             throw Exception("Failed to parse streamable media: ${e.message} sourceURL: $sourceURL trackJson: $trackJson " +
                     "trackId: $trackId quality: $quality")
         }
