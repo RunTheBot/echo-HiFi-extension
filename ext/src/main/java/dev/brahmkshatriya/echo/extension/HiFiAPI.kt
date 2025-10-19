@@ -1,9 +1,11 @@
 package dev.brahmkshatriya.echo.extension
 
 import dev.brahmkshatriya.echo.common.helpers.ContinuationCallback.Companion.await
+import kotlinx.serialization.json.JsonArray
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import java.net.URLEncoder
 
@@ -173,7 +175,26 @@ class HiFiAPI(
         }
     }
 
-    /**
+    private suspend fun getArray(path: String): JsonArray {
+        return try {
+            val url = apiUrl + path
+            val request = Request.Builder().url(url).build()
+            val response = httpClient.newCall(request).await()
+
+            if (!response.isSuccessful) {
+                throw Exception("HiFi API Error: ${response.code} - $url")
+            }
+
+            val body = response.body.string()
+            kotlinx.serialization.json.Json.parseToJsonElement(body).jsonArray
+        } catch (e: Exception) {
+            println("${e.message}")
+            throw e
+        }
+    }
+
+
+        /**
      * Make a GET request and return raw response
      */
     private suspend fun getRaw(path: String): String? {
