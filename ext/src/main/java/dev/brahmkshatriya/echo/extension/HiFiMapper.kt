@@ -2,6 +2,7 @@ package dev.brahmkshatriya.echo.extension
 
 import dev.brahmkshatriya.echo.common.models.Album
 import dev.brahmkshatriya.echo.common.models.Artist
+import dev.brahmkshatriya.echo.common.models.Date
 import dev.brahmkshatriya.echo.common.models.ImageHolder
 import dev.brahmkshatriya.echo.common.models.Playlist
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
@@ -11,6 +12,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 /**
  * Mappers for HiFi API responses to Echo data models
@@ -20,98 +23,99 @@ object HiFiMapper {
     /**
      * Parse track from HiFi API response
      */
-    fun parseTrack(json: JsonObject): Track? {
-        return try {
-            val id = json["id"]?.jsonPrimitive?.content ?: return null
-            val title = json["title"]?.jsonPrimitive?.content ?: "Unknown"
-            val duration = json["duration"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
-            
-            val artistArray = json["artists"]?.jsonArray
-            val artists = artistArray?.mapNotNull { item ->
-                val artistObj = item.jsonObject
-                Artist(
-                    id = artistObj["id"]?.jsonPrimitive?.content ?: "",
-                    name = artistObj["name"]?.jsonPrimitive?.content ?: "Unknown Artist"
-                )
-            } ?: emptyList()
-            
-            val albumObj = json["album"]?.jsonObject
-            val album = if (albumObj != null) {
+    fun parseTrack(apiTrack: APITrack): Track {
+        return Track(
+            id = apiTrack.id.toString(),
+            title = apiTrack.title,
+            cover = apiTrack.album?.let { buildImageHolder(it.cover) },
+            artists = apiTrack.artists.map { artist -> parseArtist(artist) },
+            album = apiTrack.album?.let { album ->
                 Album(
-                    id = albumObj["id"]?.jsonPrimitive?.content ?: "",
-                    title = albumObj["title"]?.jsonPrimitive?.content ?: "Unknown Album",
-                    artists = artists
+                    id = album.id.toString(),
+                    title = album.title,
+                    artists = album.artists.map { artist -> parseArtist(artist) },
+                    cover = buildImageHolder(album.cover),
+                    trackCount = album.numberOfTracks,
+                    duration = album.duration,
+                    releaseDate = runCatching {
+                        val date = LocalDate.parse(album.releaseDate, DateTimeFormatter.ISO_LOCAL_DATE)
+                        Date(day = date.dayOfMonth, month = date.monthValue, year = date.year)
+                    }.getOrNull(),
+                    isExplicit = album.explicit == true
                 )
-            } else {
-                null
-            }
-
-            Track(
-                id = id,
-                title = title,
-                duration = duration,
-                cover = albumObj?.get("cover")?.jsonPrimitive?.content?.let {
-                    buildImageHolder(it)
-                },
-                album = album,
-                artists = artists
-            )
-        } catch (e: Exception) {
-            println("Error parsing track: ${e.message}")
-            null
-        }
+            },
+            duration = apiTrack.duration,
+            isrc = apiTrack.isrc,
+            isExplicit = apiTrack.explicit,
+            albumOrderNumber = apiTrack.trackNumber,
+//            isPlayable = (if (apiTrack.streamReady && apiTrack.allowStreaming) Track.Playable.Yes else Track.Playable.No) as Track.Playable
+        )
     }
 
     /**
      * Parse album from HiFi API response
      */
-    fun parseAlbum(json: JsonObject): Album? {
-        return try {
-            val id = json["id"]?.jsonPrimitive?.content ?: return null
-            val title = json["title"]?.jsonPrimitive?.content ?: "Unknown"
+    fun parseAlbum(albumPair: Pair<APIAlbum, List<APITrack>>): Pair<Album, List<Track>> {
 
-            val artistArray = json["artists"]?.jsonArray
-            val artists = artistArray?.mapNotNull { artistElem ->
-                val artistObj = artistElem.jsonObject
-                Artist(
-                    id = artistObj["id"]?.jsonPrimitive?.content ?: "",
-                    name = artistObj["name"]?.jsonPrimitive?.content ?: ""
-                )
-            } ?: emptyList()
 
-            Album(
-                id = id,
-                title = title,
-                cover = json["cover"]?.jsonPrimitive?.content?.let { buildImageHolder(it) },
-                artists = artists
+        return albumPair.let { (apiAlbum, apiTracks) ->
+            val album = Album(
+                id = apiAlbum.id.toString(),
+                title = apiAlbum.title,
+                artists = apiAlbum.artists.map { artist ->
+                    parseArtist(artist)
+                },
+                cover = buildImageHolder(apiAlbum.cover),
+                trackCount = apiAlbum.numberOfTracks,
+                duration = apiAlbum.duration,
+                releaseDate = run { // Use run block or directly assign if releaseDate expects the Date object itself
+                    val date = LocalDate.parse(apiAlbum.releaseDate, DateTimeFormatter.ISO_LOCAL_DATE) // Use ISO_LOCAL_DATE for yyyy-MM-dd
+                    Date(
+                        day = date.dayOfMonth,
+                        month = date.monthValue,
+                        year = date.year
+                    )
+                },
+                isExplicit = apiAlbum.explicit == true
             )
-        } catch (e: Exception) {
-            println("Error parsing album: ${e.message}")
-            null
+
+            val tracks = apiTracks.map { apiTrack ->
+                parseTrack(apiTrack)
+            }
+
+            Pair(album, tracks)
         }
     }
 
     /**
      * Parse artist from HiFi API response
      */
-    fun parseArtist(json: JsonObject): Artist? {
-        return try {
-            val id = json["id"]?.jsonPrimitive?.content ?: return null
-            val name = json["name"]?.jsonPrimitive?.content ?: "Unknown"
+    fun parseArtist(apiArtist: APIArtist): Artist {
 
-            Artist(
-                id = id,
-                name = name,
-                cover = json["picture"]?.jsonPrimitive?.content?.let { buildImageHolder(it) }
-            )
-        } catch (e: Exception) {
-            println("Error parsing artist: ${e.message}")
-            null
-        }
+        return Artist(
+            id = apiArtist.id.toString(),
+            name = apiArtist.name,
+            cover = apiArtist.picture?.let { buildImageHolder(it) }
+
+        )
+
     }
 
     /**
-     * Parse playlist from HiFi API response
+     * Parse playlist from HiFi API response (APIPlaylist)
+     */
+    fun parsePlaylist(apiPlaylist: APIPlaylist): Playlist {
+        return Playlist(
+            id = apiPlaylist.id,
+            title = apiPlaylist.title,
+            isEditable = false,
+            description = apiPlaylist.description,
+            cover = apiPlaylist.cover?.let { buildImageHolder(it) }
+        )
+    }
+
+    /**
+     * Parse playlist from HiFi API response (JsonObject)
      */
     fun parsePlaylist(json: JsonObject): Playlist? {
         return try {
@@ -127,7 +131,7 @@ object HiFiMapper {
                 cover = json["image"]?.jsonPrimitive?.content?.let { buildImageHolder(it) }
             )
         } catch (e: Exception) {
-            println("Error parsing playlist: ${e.message}")
+            logMessage("Error parsing playlist: ${e.message}")
             null
         }
     }
@@ -143,48 +147,6 @@ object HiFiMapper {
         } catch (e: Exception) {
             null
         }
-    }
-
-    /**
-     * Parse search results into QuickSearchItem objects
-     * @param json Search response JSON
-     */
-    fun parseSearchResults(json: JsonObject): List<QuickSearchItem> {
-        val results = mutableListOf<QuickSearchItem>()
-        
-        try {
-            // Parse tracks
-            json["songs"]?.jsonArray?.forEach { item ->
-                parseTrack(item.jsonObject)?.let { track ->
-                    results.add(QuickSearchItem.Media(track, searched = true))
-                }
-            }
-            
-            // Parse artists
-            json["artists"]?.jsonArray?.forEach { item ->
-                parseArtist(item.jsonObject)?.let { artist ->
-                    results.add(QuickSearchItem.Media(artist, searched = true))
-                }
-            }
-            
-            // Parse albums
-            json["albums"]?.jsonArray?.forEach { item ->
-                parseAlbum(item.jsonObject)?.let { album ->
-                    results.add(QuickSearchItem.Media(album, searched = true))
-                }
-            }
-            
-            // Parse playlists
-            json["playlists"]?.jsonArray?.forEach { item ->
-                parsePlaylist(item.jsonObject)?.let { playlist ->
-                    results.add(QuickSearchItem.Media(playlist, searched = true))
-                }
-            }
-        } catch (e: Exception) {
-            println("Error parsing search results: ${e.message}")
-        }
-        
-        return results
     }
 }
 

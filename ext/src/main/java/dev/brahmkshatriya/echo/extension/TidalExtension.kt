@@ -57,10 +57,7 @@ class TidalExtension :
         searchClient = HiFiSearchClient(this, hiFiAPI)
         
         // Initialize extension - verify API connectivity if needed
-        val testResponse = hiFiAPI.searchTracks("test", limit = 1)
-        if (testResponse == null) {
-            println("Warning: Could not reach HiFi API during initialization")
-        }
+//        hiFiAPI.searchTracks("test", limit = 1)
     }
 
     // ==================== TrackClient ====================
@@ -88,24 +85,23 @@ class TidalExtension :
 
     // ==================== AlbumClient ====================
 
+    private val albumCache = mutableMapOf<String, List<Track>>()
+
     override suspend fun loadAlbum(album: Album): Album {
-        val albumData = hiFiAPI.getAlbum(album.id.toLongOrNull() ?: 0)?.let {
-            HiFiMapper.parseAlbum(it)
-        }
-        return albumData ?: album
+        val albumData = HiFiMapper.parseAlbum(
+            hiFiAPI.getAlbum(album.id.toLongOrNull() ?: 0)
+        )
+        albumCache[album.id] = albumData.second
+        return albumData.first
     }
 
     override suspend fun loadTracks(album: Album): Feed<Track>? {
-        val response = hiFiAPI.getAlbum(album.id.toLongOrNull() ?: 0) ?: return null
-        val tracks = response["items"]?.jsonArray?.mapNotNull { item ->
-            HiFiMapper.parseTrack(item.jsonObject)
-        } ?: emptyList()
+        val tracks = albumCache[album.id] ?: return null
 
-        return if (tracks.isNotEmpty()) {
-            Feed.Data(PagedData.Single { tracks }) as Feed<Track>
-        } else {
-            null
-        }
+        return Feed(
+            tabs = emptyList(),
+            getPagedData = { Feed.Data(PagedData.Single { tracks }) }
+        )
     }
 
     override suspend fun loadFeed(album: Album): Feed<Shelf>? {
@@ -114,11 +110,14 @@ class TidalExtension :
 
     // ==================== ArtistClient ====================
 
+
+    // TODO: Implement artist loading
     override suspend fun loadArtist(artist: Artist): Artist {
-        val artistData = hiFiAPI.getArtist(artist.id.toLongOrNull() ?: 0)?.let {
-            HiFiMapper.parseArtist(it)
-        }
-        return artistData ?: artist
+        TODO()
+//        val artistData = hiFiAPI.getArtist(artist.id.toLongOrNull() ?: 0)?.let {
+//            HiFiMapper.parseArtist(it)
+//        }
+//        return artistData ?: artist
     }
 
     override suspend fun loadFeed(artist: Artist): Feed<Shelf> {
@@ -131,24 +130,28 @@ class TidalExtension :
 
     // ==================== PlaylistClient ====================
 
+    //TODO: Implement playlist loading
+
     override suspend fun loadPlaylist(playlist: Playlist): Playlist {
-        val playlistData = hiFiAPI.getPlaylist(playlist.id)?.let { response ->
-            HiFiMapper.parsePlaylist(response)
-        }
-        return playlistData ?: playlist
+//        val playlistData = hiFiAPI.getPlaylist(playlist.id)?.let { response ->
+//            HiFiMapper.parsePlaylist(response)
+//        }
+//        return playlistData ?: playlist
+        TODO()
     }
 
     override suspend fun loadTracks(playlist: Playlist): Feed<Track> {
-        val response = hiFiAPI.getPlaylist(playlist.id)
-        val tracks = response?.get("items")?.jsonArray?.mapNotNull { item ->
-            val trackObj = item.jsonObject["item"]?.jsonObject ?: return@mapNotNull null
-            HiFiMapper.parseTrack(trackObj)
-        } ?: emptyList()
-
-        return Feed(
-            tabs = emptyList(),
-            getPagedData = { Feed.Data(PagedData.Single { tracks }) }
-        )
+//        val response = hiFiAPI.getPlaylist(playlist.id)
+//        val tracks = response?.get("items")?.jsonArray?.mapNotNull { item ->
+//            val trackObj = item.jsonObject["item"]?.jsonObject ?: return@mapNotNull null
+//            HiFiMapper.parseTrack(trackObj)
+//        } ?: emptyList()
+//
+//        return Feed(
+//            tabs = emptyList(),
+//            getPagedData = { Feed.Data(PagedData.Single { tracks }) }
+//        )
+        TODO()
     }
 
     override suspend fun loadFeed(playlist: Playlist): Feed<Shelf>? {

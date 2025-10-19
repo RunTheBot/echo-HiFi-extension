@@ -5,6 +5,7 @@ import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toServer
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.models.NetworkRequest
 import dev.brahmkshatriya.echo.extension.HiFiAPI
+import dev.brahmkshatriya.echo.extension.logMessage
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
@@ -32,15 +33,10 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
 
         val sourceURL = try {
             // Log the entire response to debug
-            println("HiFiTrackClient - Full Response: $trackJson")
+            logMessage("Full Response: $trackJson")
             
             // Try to get OriginalTrackUrl from the array
-            val url = trackJson.firstNotNullOfOrNull { item ->
-                val obj = item.jsonObject
-                obj["OriginalTrackUrl"]?.jsonPrimitive?.content.also { 
-                    if (it != null) println("HiFiTrackClient - Found URL: $it")
-                }
-            }
+            val url = trackJson.originalTrackUrl
             
             url ?: throw IllegalStateException("OriginalTrackUrl not found in any element. Response: $trackJson")
         } catch (e : Exception){
