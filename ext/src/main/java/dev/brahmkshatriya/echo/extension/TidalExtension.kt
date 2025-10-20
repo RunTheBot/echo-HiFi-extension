@@ -112,21 +112,57 @@ class TidalExtension :
 
     // ==================== ArtistClient ====================
 
+    private val artistCache = mutableMapOf<String, Triple<APIArtist, List<APIAlbum>, List<APITrack>>>()
+
 
     // TODO: Implement artist loading
     override suspend fun loadArtist(artist: Artist): Artist {
-        TODO()
-//        val artistData = hiFiAPI.getArtist(artist.id.toLongOrNull() ?: 0)?.let {
-//            HiFiMapper.parseArtist(it)
-//        }
-//        return artistData ?: artist
+        if (artistCache.containsKey(artist.id)) {
+            return artist
+        }
+        val artistData = hiFiAPI.getArtist(artist.id.toLongOrNull() ?: 0)
+        artistCache[artist.id] = artistData
+        return artist
     }
 
     override suspend fun loadFeed(artist: Artist): Feed<Shelf> {
-        // Return empty feed for now
+        // Get cached artist data or return empty if not available
+        val artistData = artistCache[artist.id]
+            ?: return Feed(
+                tabs = emptyList(),
+                getPagedData = { Feed.Data(PagedData.Single { emptyList<Shelf>() }) }
+            )
+
+        val (apiArtist, albums, tracks) = artistData
+        val shelves = mutableListOf<Shelf>()
+
+        // Add top tracks shelf if available (limited to top 10)
+        if (tracks.isNotEmpty()) {
+            shelves.add(
+                Shelf.Lists.Tracks(
+                    id = "artist_top_tracks",
+                    title = "Top Tracks",
+                    list = tracks.take(12).map { HiFiMapper.parseTrack(it) }
+                )
+            )
+        }
+
+        // Add albums shelf if available
+        if (albums.isNotEmpty()) {
+            shelves.add(
+                Shelf.Lists.Items(
+                    id = "artist_albums",
+                    title = "Albums",
+                    list = albums.map { album ->
+                        HiFiMapper.parseAlbum(album to emptyList()).first
+                    } as List<dev.brahmkshatriya.echo.common.models.EchoMediaItem>
+                )
+            )
+        }
+
         return Feed(
             tabs = emptyList(),
-            getPagedData = { Feed.Data(PagedData.Single { emptyList<Shelf>() }) }
+            getPagedData = { Feed.Data(PagedData.Single { shelves }) }
         )
     }
 

@@ -96,7 +96,6 @@ object HiFiMapper {
             id = apiArtist.id.toString(),
             name = apiArtist.name,
             cover = apiArtist.picture?.let { buildImageHolder(it) }
-
         )
 
     }
