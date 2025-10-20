@@ -17,6 +17,8 @@ import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.settings.Setting
+import dev.brahmkshatriya.echo.common.settings.SettingList
+import dev.brahmkshatriya.echo.common.settings.SettingTextInput
 import dev.brahmkshatriya.echo.common.settings.Settings
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parseArtist
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parsePlaylist
@@ -26,6 +28,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 import okhttp3.OkHttpClient
+import kotlin.random.Random
 
 /**
  * Tidal HiFi Extension for Echo
@@ -42,12 +45,24 @@ class TidalExtension :
     QuickSearchClient {
 
     private lateinit var settings: Settings
-    private val hiFiAPI = HiFiAPI()
+    private val hiFiAPI = HiFiAPI(settings)
     private val httpClient = OkHttpClient()
     private lateinit var searchClient: HiFiSearchClient
 
+    companion object {
+        private const val API_ENDPOINT_KEY = "api_endpoint"
+        private const val DEFAULT_ENDPOINT = "https://tidal.401658.xyz"
+    }
+
     override suspend fun getSettingItems(): List<Setting> {
-        return emptyList()
+        return listOf(
+            SettingTextInput(
+                title = "API Endpoint",
+                key = API_ENDPOINT_KEY,
+                summary = "Select or enter the Tidal HiFi API endpoint URL",
+                defaultValue = DEFAULT_ENDPOINT,
+            )
+        )
     }
 
     override fun setSettings(settings: Settings) {

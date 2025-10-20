@@ -1,5 +1,6 @@
 package dev.brahmkshatriya.echo.extension
 
+import dev.brahmkshatriya.echo.common.settings.Settings
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -10,11 +11,9 @@ import java.net.URLEncoder
 import java.util.*
 import kotlin.math.pow
 
-const val API_BASE = "https://tidal.401658.xyz"
 const val RATE_LIMIT_ERROR_MESSAGE = "Rate limited"
 const val DASH_MANIFEST_UNAVAILABLE_CODE = "DASH_UNAVAILABLE"
 
-typealias RegionOption = String
 typealias AudioQuality = String
 
 
@@ -24,27 +23,19 @@ typealias AudioQuality = String
  * Ported from TypeScript to Kotlin
  */
 class HiFiAPI(
-    var baseUrl: String = API_BASE,
-    private val httpClient: OkHttpClient = OkHttpClient()
+    private val httpClient: OkHttpClient = OkHttpClient(),
+    private val settings: Settings
 ) {
     private val metadataQueueMutex = Mutex()
 
-    constructor(baseUrl: String = API_BASE) : this(baseUrl, OkHttpClient())
+    constructor(settings: Settings) : this(OkHttpClient(), settings)
+    
 
-    private fun resolveRegionalBase(region: RegionOption = "auto"): String {
-        return try {
-            val target = selectApiTargetForRegion(region)
-            target?.baseUrl ?: baseUrl
-        } catch (error: Exception) {
-            println("HiFiTrackClient - Falling back to default API base URL for region selection $error")
-            baseUrl
-        }
-    }
 
-    private fun buildRegionalUrl(path: String, region: RegionOption = "auto"): String {
-        val base = resolveRegionalBase(region).replace(Regex("/+$"), "")
+    private suspend fun buildUrl(path: String): String {
         val normalizedPath = if (path.startsWith("/")) path else "/$path"
-        return "$base$normalizedPath"
+        val baseUrl = settings.getString("api_endpoint")
+        return "$baseUrl$normalizedPath"
     }
 
     private fun <T> normalizeSearchResponse(
@@ -286,10 +277,9 @@ class HiFiAPI(
     /**
      * Search for tracks
      */
-    suspend fun searchTracks(query: String, limit: Long?, region: RegionOption = "auto"): SearchResponse<APITrack> {
+    suspend fun searchTracks(query: String, limit: Long?): SearchResponse<APITrack> {
         val response =
-            fetch(buildRegionalUrl("/search/?s=${URLEncoder.encode(query, "UTF-8")}${limit?.let { "&li=$it" } ?: ""}",
-                region))
+            fetch(buildUrl("/search/?s=${URLEncoder.encode(query, "UTF-8")}${limit?.let { "&li=$it" } ?: ""}"))
         ensureNotRateLimited(response)
         if (!response.isSuccessful) throw Exception("Failed to search tracks")
         val data = response.body.string()
@@ -314,8 +304,8 @@ class HiFiAPI(
     /**
      * Search for artists
      */
-    suspend fun searchArtists(query: String, region: RegionOption = "auto"): SearchResponse<APIArtist> {
-        val response = fetch(buildRegionalUrl("/search/?a=${URLEncoder.encode(query, "UTF-8")}", region))
+    suspend fun searchArtists(query: String, ): SearchResponse<APIArtist> {
+        val response = fetch(buildUrl("/search/?a=${URLEncoder.encode(query, "UTF-8")}"))
         ensureNotRateLimited(response)
         if (!response.isSuccessful) throw Exception("Failed to search artists")
         val data = response.body.string()
@@ -339,8 +329,8 @@ class HiFiAPI(
     /**
      * Search for albums
      */
-    suspend fun searchAlbums(query: String, region: RegionOption = "auto"): SearchResponse<APIAlbum> {
-        val response = fetch(buildRegionalUrl("/search/?al=${URLEncoder.encode(query, "UTF-8")}", region))
+    suspend fun searchAlbums(query: String): SearchResponse<APIAlbum> {
+        val response = fetch(buildUrl("/search/?al=${URLEncoder.encode(query, "UTF-8")}"))
         ensureNotRateLimited(response)
         if (!response.isSuccessful) throw Exception("Failed to search albums")
         val data = response.body.string()
@@ -364,8 +354,8 @@ class HiFiAPI(
     /**
      * Search for playlists
      */
-    suspend fun searchPlaylists(query: String, region: RegionOption = "auto"): SearchResponse<APIPlaylist> {
-        val response = fetch(buildRegionalUrl("/search/?p=${URLEncoder.encode(query, "UTF-8")}", region))
+    suspend fun searchPlaylists(query: String): SearchResponse<APIPlaylist> {
+        val response = fetch(buildUrl("/search/?p=${URLEncoder.encode(query, "UTF-8")}"))
         ensureNotRateLimited(response)
         if (!response.isSuccessful) throw Exception("Failed to search playlists")
         val data = response.body.string()
@@ -390,7 +380,7 @@ class HiFiAPI(
      * Get track info and stream URL (with retries for quality fallback)
      */
     suspend fun getTrack(id: Long, quality: AudioQuality = "LOSSLESS"): TrackLookup {
-        val url = "$baseUrl/track/?id=$id&quality=$quality"
+        val url = buildUrl("/track/?id=$id&quality=$quality")
         var lastError: Exception? = null
 
         for (attempt in 1..3) {
@@ -437,7 +427,7 @@ class HiFiAPI(
         trackId: Long,
         quality: AudioQuality = "HI_RES_LOSSLESS"
     ): DashManifestResult {
-        val url = "$baseUrl/dash/?id=$trackId&quality=$quality"
+        val url = buildUrl("/dash/?id=$trackId&quality=$quality")
         var lastError: Exception? = null
 
         for (attempt in 1..3) {
@@ -523,7 +513,7 @@ class HiFiAPI(
      * Get album details with track listing
      */
     suspend fun getAlbum(id: Long): Pair<APIAlbum, List<APITrack>> {
-        val response = fetch("$baseUrl/album/?id=$id")
+        val response = fetch(buildUrl("l/album/?id=$id"))
         ensureNotRateLimited(response)
         if (!response.isSuccessful) throw Exception("Failed to get album")
         val data = response.body.string()
@@ -587,7 +577,7 @@ class HiFiAPI(
      * Get artist details with albums and top tracks
      */
     suspend fun getArtist(id: Long): Triple<APIArtist, List<APIAlbum>, List<APITrack>> {
-        val response = fetch("$baseUrl/artist/?f=$id")
+        val response = fetch(buildUrl("/artist/?f=$id"))
         ensureNotRateLimited(response)
         if (!response.isSuccessful) throw Exception("Failed to get artist")
         val data = response.body.string()
@@ -781,7 +771,7 @@ class HiFiAPI(
 
         if (artist == null) {
             try {
-                val fallbackResponse = fetch("$baseUrl/artist/?id=$id")
+                val fallbackResponse = fetch(buildUrl("/artist/?id=$id"))
                 ensureNotRateLimited(fallbackResponse)
                 if (fallbackResponse.isSuccessful) {
                     val fallbackData = fallbackResponse.body.string()
@@ -856,7 +846,7 @@ class HiFiAPI(
      * Get playlist details
      */
     suspend fun getPlaylist(uuid: String): Pair<APIPlaylist, List<APITrack>> {
-        val response = fetch("$baseUrl/playlist/?id=$uuid")
+        val response = fetch(buildUrl("/playlist/?id=$uuid"))
         ensureNotRateLimited(response)
         if (!response.isSuccessful) throw Exception("Failed to get playlist")
         val data = response.body.string()
@@ -1120,23 +1110,4 @@ data class TrackInfo (
     val sampleRate: Long?,
 )
 
-/**
- * Data class for API regional target
- */
-data class ApiTarget(
-    val baseUrl: String,
-    val region: String
-)
-
-/**
- * Helper function to select API target for region
- */
-fun selectApiTargetForRegion(region: RegionOption): ApiTarget? {
-    return when (region.lowercase()) {
-        "eu" -> ApiTarget("https://tidal.401658.xyz", "eu")
-        "us" -> ApiTarget("https://tidal.401658.xyz", "us")
-        "auto", "default" -> ApiTarget(API_BASE, "default")
-        else -> null
-    }
-}
 
