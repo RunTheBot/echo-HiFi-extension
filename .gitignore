@@ -8,4 +8,4 @@
 .cxx
 local.properties
 bin/
-key.keystore
+/signing-key.jks
