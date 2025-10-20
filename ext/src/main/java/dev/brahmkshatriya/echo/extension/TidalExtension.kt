@@ -18,6 +18,8 @@ import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.Settings
+import dev.brahmkshatriya.echo.extension.HiFiMapper.parseArtist
+import dev.brahmkshatriya.echo.extension.HiFiMapper.parsePlaylist
 import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient
 import dev.brahmkshatriya.echo.extension.clients.HiFiTrackClient
 import kotlinx.serialization.json.jsonArray
@@ -117,12 +119,9 @@ class TidalExtension :
 
     // TODO: Implement artist loading
     override suspend fun loadArtist(artist: Artist): Artist {
-        if (artistCache.containsKey(artist.id)) {
-            return artist
-        }
         val artistData = hiFiAPI.getArtist(artist.id.toLongOrNull() ?: 0)
         artistCache[artist.id] = artistData
-        return artist
+        return parseArtist(artistData.first)
     }
 
     override suspend fun loadFeed(artist: Artist): Feed<Shelf> {
@@ -168,28 +167,24 @@ class TidalExtension :
 
     // ==================== PlaylistClient ====================
 
-    //TODO: Implement playlist loading
+    var playlistCache = mutableMapOf<String, Pair<APIPlaylist, List<APITrack>>>()
 
     override suspend fun loadPlaylist(playlist: Playlist): Playlist {
-//        val playlistData = hiFiAPI.getPlaylist(playlist.id)?.let { response ->
-//            HiFiMapper.parsePlaylist(response)
-//        }
-//        return playlistData ?: playlist
-        TODO()
+        val playlistData = hiFiAPI.getPlaylist(playlist.id)
+        playlistCache[playlist.id] = playlistData
+        return parsePlaylist(playlistData.first)
     }
 
     override suspend fun loadTracks(playlist: Playlist): Feed<Track> {
-//        val response = hiFiAPI.getPlaylist(playlist.id)
-//        val tracks = response?.get("items")?.jsonArray?.mapNotNull { item ->
-//            val trackObj = item.jsonObject["item"]?.jsonObject ?: return@mapNotNull null
-//            HiFiMapper.parseTrack(trackObj)
-//        } ?: emptyList()
-//
-//        return Feed(
-//            tabs = emptyList(),
-//            getPagedData = { Feed.Data(PagedData.Single { tracks }) }
-//        )
-        TODO()
+        val tracks = playlistCache[playlist.id]?.second ?: return Feed(
+            tabs = emptyList(),
+            getPagedData = { Feed.Data(PagedData.Single { emptyList<Track>() }) }
+        )
+
+        return Feed(
+            tabs = emptyList(),
+            getPagedData = { Feed.Data(PagedData.Single { tracks.map { HiFiMapper.parseTrack(it) } }) }
+        )
     }
 
     override suspend fun loadFeed(playlist: Playlist): Feed<Shelf>? {

@@ -531,14 +531,14 @@ class HiFiAPI(
 
         val entries = json as? JsonArray ?: listOf(json)
 
-        val albumEntry: APIAlbum? = null
+        var albumEntry: APIAlbum? = null
         var trackCollection: JsonObject? = null
 
         for (entry in entries) {
             if (entry !is JsonObject) continue
 
             if (entry.containsKey("title") && entry.containsKey("id") && entry.containsKey("cover")) {
-                // albumEntry = prepareAlbum(entry as Album)
+                albumEntry = prepareAlbum(Json.decodeFromJsonElement<APIAlbum>(entry))
                 continue
             }
 
@@ -551,29 +551,36 @@ class HiFiAPI(
             throw Exception("Album not found")
         }
 
-        val APITracks: MutableList<APITrack> = mutableListOf()
+        val tracks: MutableList<APITrack> = mutableListOf()
         val items = trackCollection?.get("items")?.jsonArray
+        logMessage("Album track items: $items")
         if (items != null) {
             for (rawItem in items) {
-                if (rawItem !is JsonObject) continue
-
-                var APITrackCandidate: APITrack? = null
-                if (rawItem.containsKey("item") && rawItem["item"] is JsonObject) {
-                    APITrackCandidate = rawItem["item"] as APITrack
-                } else {
-                    APITrackCandidate = rawItem as APITrack
+                if (rawItem !is JsonObject) {
+                    logMessage("Skipping non-object track item: $rawItem")
+                    continue
                 }
 
-                val candidateWithAlbum = if (APITrackCandidate.album == null) {
-                    // trackCandidate.copy(album = albumEntry)
-                    APITrackCandidate
+                var trackCandidate: APITrack? = null
+                if (rawItem.containsKey("item") && rawItem["item"] is JsonObject) {
+                    trackCandidate = rawItem["item"]?.let { Json.decodeFromJsonElement<APITrack>(it) }
                 } else {
-                    APITrackCandidate
+                    trackCandidate = Json.decodeFromJsonElement<APITrack>(rawItem)
+                }
+
+                val candidateWithAlbum = if (trackCandidate?.album == null) {
+                    trackCandidate?.copy(album = albumEntry)
+                } else {
+                    trackCandidate
+                }
+
+                if (candidateWithAlbum != null) {
+                    tracks.add(prepareTrack(candidateWithAlbum))
                 }
             }
         }
 
-        return Pair(albumEntry, APITracks)
+        return Pair(albumEntry, tracks)
     }
 
     /**
@@ -843,6 +850,64 @@ class HiFiAPI(
             sortedAlbums,
             sortedTracks
         )
+    }
+
+    /**
+     * Get playlist details
+     */
+    suspend fun getPlaylist(uuid: String): Pair<APIPlaylist, List<APITrack>> {
+        val response = fetch("$baseUrl/playlist/?id=$uuid")
+        ensureNotRateLimited(response)
+        if (!response.isSuccessful) throw Exception("Failed to get playlist")
+        val data = response.body.string()
+        val json = Json.parseToJsonElement(data)
+
+        val entries = json as? JsonArray ?: listOf(json)
+
+        var playlistEntry: APIPlaylist? = null
+        var trackCollection: JsonObject? = null
+
+        for (entry in entries) {
+            if (entry !is JsonObject) continue
+
+            if (entry.containsKey("uuid") && entry.containsKey("title")) {
+                playlistEntry = Json.decodeFromJsonElement<APIPlaylist>(entry)
+                continue
+            }
+
+            if (trackCollection == null && entry.containsKey("items") && entry["items"] is JsonArray) {
+                trackCollection = entry
+            }
+        }
+
+        if (playlistEntry == null) {
+            throw Exception("Playlist not found")
+        }
+
+        val tracks: MutableList<APITrack> = mutableListOf()
+        val items = trackCollection?.get("items")?.jsonArray
+        logMessage("Playlist track items: $items")
+        if (items != null) {
+            for (rawItem in items) {
+                if (rawItem !is JsonObject) {
+                    logMessage("Skipping non-object track item: $rawItem")
+                    continue
+                }
+
+                var trackCandidate: APITrack? = null
+                if (rawItem.containsKey("item") && rawItem["item"] is JsonObject) {
+                    trackCandidate = rawItem["item"]?.let { Json.decodeFromJsonElement<APITrack>(it) }
+                } else {
+                    trackCandidate = Json.decodeFromJsonElement<APITrack>(rawItem)
+                }
+
+                if (trackCandidate != null) {
+                    tracks.add(prepareTrack(trackCandidate))
+                }
+            }
+        }
+
+        return Pair(playlistEntry, tracks)
     }
 
     /**
