@@ -137,22 +137,22 @@ class HiFiSearchClient(
 
         // TODO: Enable artist search when debugged
         
-//        // Search for artists
-//        try {
-//            val artistsResponse = hifiClient.searchArtists(query)
-//            if (artistsResponse.items.isNotEmpty()) {
-//                @Suppress("UNCHECKED_CAST")
-//                shelves.add(
-//                    Shelf.Lists.Items(
-//                        id = "search_artists",
-//                        title = "Artists",
-//                        list = artistsResponse.items.map { HiFiMapper.parseArtist(it) } as List<dev.brahmkshatriya.echo.common.models.EchoMediaItem>
-//                    )
-//                )
-//            }
-//        } catch (e: Exception) {
-//            logMessage("Error searching artists: ${e.message}")
-//        }
+        // Search for artists
+        try {
+            val artistsResponse = hifiClient.searchArtists(query)
+            if (artistsResponse.items.isNotEmpty()) {
+                @Suppress("UNCHECKED_CAST")
+                shelves.add(
+                    Shelf.Lists.Items(
+                        id = "search_artists",
+                        title = "Artists",
+                        list = artistsResponse.items.map { HiFiMapper.parseArtist(it) } as List<dev.brahmkshatriya.echo.common.models.EchoMediaItem>
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            logMessage("Error searching artists: ${e.message}")
+        }
 
         // Search for albums
         try {

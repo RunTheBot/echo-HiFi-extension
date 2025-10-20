@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.URLEncoder
 import java.util.*
+import kotlin.math.pow
 
 const val API_BASE = "https://tidal.401658.xyz"
 const val RATE_LIMIT_ERROR_MESSAGE = "Rate limited"
@@ -160,19 +161,19 @@ class HiFiAPI(
         delay(ms)
     }
 
-    private fun parseTrackLookup(data: JsonObject): TrackLookup {
-        val entries = listOf(data)
-        val APITrack: APITrack? = null
-        val info: TrackInfo? = null
+    private fun parseTrackLookup(data: JsonArray): TrackLookup {
+        var apiTrack: APITrack? = null
+        var info: TrackInfo? = null
         var originalTrackUrl: String? = null
 
-        for (entry in entries) {
+        for (entry in data) {
+            entry as JsonObject
             if (entry.containsKey("album") && entry.containsKey("artist") && entry.containsKey("duration")) {
-                // track = entry as Track
+                apiTrack = Json.decodeFromJsonElement<APITrack>(entry)
                 continue
             }
             if (entry.containsKey("manifest")) {
-                // info = entry as TrackInfo
+                info = Json.decodeFromJsonElement<TrackInfo>(entry)
                 continue
             }
             if (originalTrackUrl == null && entry.containsKey("OriginalTrackUrl")) {
@@ -183,12 +184,12 @@ class HiFiAPI(
             }
         }
 
-        if (APITrack == null || info == null) {
+        if (apiTrack == null || info == null) {
             throw Exception("Malformed track response")
         }
 
         return object : TrackLookup {
-            override val apiTrack: APITrack = APITrack
+            override val apiTrack: APITrack = apiTrack
             override val info: TrackInfo = info
             override val originalTrackUrl: String? = originalTrackUrl
         }
@@ -318,11 +319,11 @@ class HiFiAPI(
         ensureNotRateLimited(response)
         if (!response.isSuccessful) throw Exception("Failed to search artists")
         val data = response.body.string()
-        val json = kotlinx.serialization.json.Json.parseToJsonElement(data) as JsonObject
+        val json = (Json.parseToJsonElement(data) as JsonArray)[0] as JsonObject
         val normalized = normalizeSearchResponse<JsonObject>(json, "artists")
         val deserializedItems = normalized.items.map { item ->
             try {
-                prepareArtist(kotlinx.serialization.json.Json.decodeFromJsonElement<APIArtist>(item as JsonElement))
+                prepareArtist(Json.decodeFromJsonElement<APIArtist>(item as JsonElement))
             } catch (e: Exception) {
                 throw e
             }
@@ -397,7 +398,7 @@ class HiFiAPI(
             ensureNotRateLimited(response)
             if (response.isSuccessful) {
                 val data = response.body.string()
-                val json = Json.parseToJsonElement(data) as JsonObject
+                val json = Json.parseToJsonElement(data) as JsonArray
                 return parseTrackLookup(json)
             }
 
@@ -426,7 +427,7 @@ class HiFiAPI(
                 throw lastError
             }
 
-            delay(200L * attempt)
+            delay(2.0.pow(attempt.toDouble()).toLong() * 100L)
         }
 
         throw lastError ?: Exception("Failed to get track")
@@ -651,8 +652,8 @@ data class APITrack(
     val id: Long,
     val title: String,
     val duration: Long,
-    val replayGain: Float? = null,
-    val peak: Float? = null,
+    val replayGain: Double? = null,
+    val peak: Double? = null,
     val allowStreaming: Boolean = true,
     val streamReady: Boolean = true,
     val payToStream: Boolean = false,
@@ -767,20 +768,23 @@ data class APIPlaylist(
     val lastItemAddedAt: String? = null
 )
 
-interface TrackInfo {
-    val trackId: Long
-    val audioQuality: String
-    val audioMode: String
-    val manifest: String
-    val manifestMimeType: String
-    val assetPresentation: String
-    val albumReplayGain: Long?
-    val albumPeakAmplitude: Long?
-    val trackReplayGain: Long?
-    val trackPeakAmplitude: Long?
-    val bitDepth: Long?
-    val sampleRate: Long?
-}
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@JsonIgnoreUnknownKeys
+data class TrackInfo (
+    val trackId: Long,
+    val audioQuality: String,
+    val audioMode: String,
+    val manifest: String,
+    val manifestMimeType: String,
+    val assetPresentation: String,
+    val albumReplayGain: Double?,
+    val albumPeakAmplitude: Double?,
+    val trackReplayGain: Double?,
+    val trackPeakAmplitude: Double?,
+    val bitDepth: Long?,
+    val sampleRate: Long?,
+)
 
 /**
  * Data class for API regional target
