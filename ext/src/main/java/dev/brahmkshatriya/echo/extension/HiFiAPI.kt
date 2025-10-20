@@ -1115,12 +1115,12 @@ data class TrackInfo (
     val manifest: String,
     val manifestMimeType: String,
     val assetPresentation: String,
-    val albumReplayGain: Double?,
-    val albumPeakAmplitude: Double?,
-    val trackReplayGain: Double?,
-    val trackPeakAmplitude: Double?,
-    val bitDepth: Long?,
-    val sampleRate: Long?,
+    val albumReplayGain: Double? = null,
+    val albumPeakAmplitude: Double? = null,
+    val trackReplayGain: Double? = null,
+    val trackPeakAmplitude: Double? = null,
+    val bitDepth: Long? = null,
+    val sampleRate: Long? = null,
 )
 
 

@@ -29,7 +29,9 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
     suspend fun loadStreamableMedia(streamable: Streamable): Streamable.Media {
         val quality = streamable.extras["QUALITY"] ?: "LOW"
         val trackId = streamable.id.removePrefix(placeholderPrefix).substringBefore(":").toLong()
-        if (quality !== "HI_RES_LOSSLESS") {
+        logMessage("Loading streamable media for trackId: $trackId with quality: '$quality'")
+        if (quality != "HI_RES_LOSSLESS") {
+            logMessage("Loading streamable media Low/High/Lossless for trackId: $trackId with quality: $quality")
             val trackJson = hiFiAPI.getTrack(trackId, quality)
 
             val sourceURL = try {
@@ -63,7 +65,10 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
                         "trackId: $trackId quality: $quality")
             }
         } else {
+            logMessage("Loading streamable media Hi-Res Lossless for trackId: $trackId with quality: $quality")
             val dashManifestResult = hiFiAPI.getDashURL(trackId)
+
+            logMessage("Loading streamable media Hi-Res: $dashManifestResult")
 
             val dashSource = Streamable.Source.Http(
                 request = NetworkRequest(url = dashManifestResult),
