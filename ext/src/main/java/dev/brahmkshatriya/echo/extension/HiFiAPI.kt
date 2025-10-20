@@ -429,6 +429,13 @@ class HiFiAPI(
         throw lastError ?: Exception("Failed to get track")
     }
 
+    suspend fun getDashURL(trackId: Long, quality: AudioQuality = "HI_RES_LOSSLESS"): String{
+
+        val url = buildUrl("/dash/?id=$trackId&quality=$quality")
+        return url
+
+    }
+
     suspend fun getDashManifest(
         trackId: Long,
         quality: AudioQuality = "HI_RES_LOSSLESS"

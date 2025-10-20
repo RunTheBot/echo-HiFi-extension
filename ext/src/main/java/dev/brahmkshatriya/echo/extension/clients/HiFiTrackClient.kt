@@ -29,37 +29,53 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
     suspend fun loadStreamableMedia(streamable: Streamable): Streamable.Media {
         val quality = streamable.extras["QUALITY"] ?: "LOW"
         val trackId = streamable.id.removePrefix(placeholderPrefix).substringBefore(":").toLong()
-        val trackJson = hiFiAPI.getTrack(trackId, quality)
+        if (quality !== "HI_RES_LOSSLESS") {
+            val trackJson = hiFiAPI.getTrack(trackId, quality)
 
-        val sourceURL = try {
-            // Log the entire response to debug
-            logMessage("Full Response: $trackJson")
-            
-            // Try to get OriginalTrackUrl from the array
-            val url = trackJson.originalTrackUrl
-            
-            url ?: throw IllegalStateException("OriginalTrackUrl not found in any element. Response: $trackJson")
-        } catch (e : Exception){
-            throw Exception("Failed to extract source URL: ${e.message} sourceJSON: $trackJson trackId: $trackId quality: $quality")
-        }
-//        val dashUrl = hiFiAPI.getDashStreamUrl(trackId)
+            val sourceURL = try {
+                // Log the entire response to debug
+                logMessage("Full Response: $trackJson")
+
+                // Try to get OriginalTrackUrl from the array
+                val url = trackJson.originalTrackUrl
+
+                url ?: throw IllegalStateException("OriginalTrackUrl not found in any element. Response: $trackJson")
+            } catch (e : Exception){
+                throw Exception("Failed to extract source URL: ${e.message} sourceJSON: $trackJson trackId: $trackId quality: $quality")
+            }
+    //        val dashUrl = hiFiAPI.getDashStreamUrl(trackId)
 
 
-        return try {
-            val audioSource = Streamable.Source.Http(
-                request = NetworkRequest(url = sourceURL),
-                type = Streamable.SourceType.Progressive,
+            return try {
+                val audioSource = Streamable.Source.Http(
+                    request = NetworkRequest(url = sourceURL),
+                    type = Streamable.SourceType.Progressive,
+                    quality = getQualityValue(quality),
+                    title = "Audio - $quality"
+                )
+
+                Streamable.Media.Server(
+                    sources = listOf(audioSource),
+                    merged = false
+                )
+            } catch (e: Exception){
+                throw Exception("Failed to parse streamable media: ${e.message} source: $sourceURL " +
+                        "trackId: $trackId quality: $quality")
+            }
+        } else {
+            val dashManifestResult = hiFiAPI.getDashURL(trackId)
+
+            val dashSource = Streamable.Source.Http(
+                request = NetworkRequest(url = dashManifestResult),
+                type = Streamable.SourceType.DASH,
                 quality = getQualityValue(quality),
-                title = "Audio - $quality"
+                title = "DASH - $quality"
             )
 
-            Streamable.Media.Server(
-                sources = listOf(audioSource),
+            return Streamable.Media.Server(
+                sources = listOf(dashSource),
                 merged = false
             )
-        } catch (e: Exception){
-            throw Exception("Failed to parse streamable media: ${e.message} source: $sourceURL " +
-                    "trackId: $trackId quality: $quality")
         }
 
     }
