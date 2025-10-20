@@ -24,17 +24,23 @@ typealias AudioQuality = String
  */
 class HiFiAPI(
     private val httpClient: OkHttpClient = OkHttpClient(),
-    private val settings: Settings
 ) {
     private val metadataQueueMutex = Mutex()
 
-    constructor(settings: Settings) : this(OkHttpClient(), settings)
+    constructor() : this(OkHttpClient())
     
 
 
     private suspend fun buildUrl(path: String): String {
         val normalizedPath = if (path.startsWith("/")) path else "/$path"
-        val baseUrl = settings.getString("api_endpoint")
+        // Log if base URL is missing
+        val baseUrl = HiFiSession.getInstance().settings?.getString("api_endpoint")
+
+        if (baseUrl == null) {
+            logMessage("Warning: API endpoint is not configured in settings.")
+            throw Exception("API endpoint is not configured.")
+        }
+
         return "$baseUrl$normalizedPath"
     }
 
@@ -281,7 +287,7 @@ class HiFiAPI(
         val response =
             fetch(buildUrl("/search/?s=${URLEncoder.encode(query, "UTF-8")}${limit?.let { "&li=$it" } ?: ""}"))
         ensureNotRateLimited(response)
-        if (!response.isSuccessful) throw Exception("Failed to search tracks")
+        if (!response.isSuccessful) throw Exception("Failed to search tracks: ${response.code}")
         val data = response.body.string()
         val json = Json.parseToJsonElement(data) as JsonObject
         val normalized = normalizeSearchResponse<JsonObject>(json, "tracks")

@@ -44,8 +44,8 @@ class TidalExtension :
     HomeFeedClient,
     QuickSearchClient {
 
-    private lateinit var settings: Settings
-    private val hiFiAPI = HiFiAPI(settings)
+    private val session by lazy { HiFiSession.getInstance() }
+    private lateinit var hiFiAPI: HiFiAPI
     private val httpClient = OkHttpClient()
     private lateinit var searchClient: HiFiSearchClient
 
@@ -66,11 +66,16 @@ class TidalExtension :
     }
 
     override fun setSettings(settings: Settings) {
-        this.settings = settings
+        session.settings = settings
     }
+
+    override suspend fun onExtensionSelected() {
+    }
+
 
     override suspend fun onInitialize() {
         // Initialize search client
+        hiFiAPI = HiFiAPI()
         searchClient = HiFiSearchClient(this, hiFiAPI)
 
         logMessage("Tidal HiFi Extension initialized")
