@@ -1,36 +1,21 @@
 package dev.brahmkshatriya.echo.extension.clients
 
 import dev.brahmkshatriya.echo.common.models.Streamable
-import dev.brahmkshatriya.echo.common.models.Streamable.Media.Companion.toServerMedia
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.models.NetworkRequest
+import dev.brahmkshatriya.echo.extension.AudioQuality
 import dev.brahmkshatriya.echo.extension.HiFiAPI
 import dev.brahmkshatriya.echo.extension.logMessage
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.OkHttpClient
+import kotlinx.serialization.json.Json
 
 
 class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
-    private val client by lazy { OkHttpClient() }
-
-    private val qualityOptions = listOf("HI_RES_LOSSLESS", "LOSSLESS", "HIGH", "LOW")
-
-    private fun getQualityValue(quality: String): Int {
-        return when (quality) {
-            "HI_RES_LOSSLESS" -> 9
-            "LOSSLESS" -> 6
-            "HIGH" -> 3
-            "LOW" -> 0
-            else -> 0
-        }
-    }
-
     suspend fun loadStreamableMedia(streamable: Streamable): Streamable.Media {
-        val quality = streamable.extras["QUALITY"] ?: "LOW"
+        val quality = streamable.extras["QUALITY"]?.let { Json.decodeFromString<AudioQuality>(it) }
+            ?: throw IllegalStateException("QUALITIES_AVAILABLE not found in track extras")
         val trackId = streamable.id.removePrefix(placeholderPrefix).substringBefore(":").toLong()
         logMessage("Loading streamable media for trackId: $trackId with quality: '$quality'")
-        if (quality != "HI_RES_LOSSLESS") {
+        if (quality != AudioQuality.HIRES_LOSSLESS) {
 //            logMessage("Loading streamable media Low/High/Lossless for trackId: $trackId with quality: $quality")
             val trackJson = hiFiAPI.getTrack(trackId, quality)
 
@@ -52,7 +37,7 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
                 val audioSource = Streamable.Source.Http(
                     request = NetworkRequest(url = sourceURL),
                     type = Streamable.SourceType.Progressive,
-                    quality = getQualityValue(quality),
+                    quality = quality.ordinal,
                     title = "Audio - $quality"
                 )
 
@@ -73,7 +58,7 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
             val dashSource = Streamable.Source.Http(
                 request = NetworkRequest(url = dashManifestResult),
                 type = Streamable.SourceType.DASH,
-                quality = getQualityValue(quality),
+                quality = quality.ordinal,
                 title = "DASH - $quality"
             )
 
@@ -88,36 +73,56 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
 
     suspend fun loadTrack(track: Track): Track {
 
-        logMessage("Loading track with ID: ${track.id} and title: ${track.title} with max quality of '${track.extras["MAX_QUALITY"]}'")
+        val qualitiesAvailable = track.extras["QUALITIES_AVAILABLE"]?.let {
+            Json.decodeFromString<List<AudioQuality>>(
+                it
+            )
+        } ?: throw IllegalStateException("QUALITIES_AVAILABLE not found in track extras")
+
+        logMessage("Loading track with ID: ${track.id} and title: ${track.title} with available qualities: ${track.extras["QUALITIES_AVAILABLE"]}")
         logMessage("Track Json: ${track.extras["API_TRACK_JSON"]}")
 
-        val streamables = qualityOptions.map { quality ->
+//        val streamables = qualityOptions.map { quality ->
+//
+//            val qualityValue = when (quality) {
+//                "HI_RES_LOSSLESS" -> 9
+//                "LOSSLESS" -> 6
+//                "HIGH" -> 3
+//                "LOW" -> 0
+//                else -> 0
+//            }
+//
+//            val qualityTitle = when (quality) {
+//                "HI_RES_LOSSLESS" -> "Hi-Res Lossless"
+//                "LOSSLESS" -> "Lossless"
+//                "HIGH" -> "High"
+//                "LOW" -> "Low"
+//                else -> "UNKNOWN"
+//            }
+//
+//            Streamable.server(
+//                id = "$placeholderPrefix${track.id}:$quality",
+//                quality = qualityValue,
+//                title = qualityTitle,
+//                extras = mapOf(
+//                    "QUALITY" to quality
+//                )
+//            )
+//        }
 
-            val qualityValue = when (quality) {
-                "HI_RES_LOSSLESS" -> 9
-                "LOSSLESS" -> 6
-                "HIGH" -> 3
-                "LOW" -> 0
-                else -> 0
-            }
-
-            val qualityTitle = when (quality) {
-                "HI_RES_LOSSLESS" -> "Hi-Res Lossless"
-                "LOSSLESS" -> "Lossless"
-                "HIGH" -> "High"
-                "LOW" -> "Low"
-                else -> "UNKNOWN"
-            }
-
+        val streamables = qualitiesAvailable
+            .reversed()
+            .map { quality ->
             Streamable.server(
                 id = "$placeholderPrefix${track.id}:$quality",
-                quality = qualityValue,
-                title = qualityTitle,
+                quality = quality.ordinal,
+                title = quality.displayName,
                 extras = mapOf(
-                    "QUALITY" to quality
+                    "QUALITY" to Json.encodeToString(quality)
                 )
             )
         }
+
         return track.copy(
             streamables = streamables
         )

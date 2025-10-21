@@ -13,9 +13,6 @@ import kotlin.math.pow
 const val RATE_LIMIT_ERROR_MESSAGE = "Rate limited"
 const val DASH_MANIFEST_UNAVAILABLE_CODE = "DASH_UNAVAILABLE"
 
-typealias AudioQuality = String
-
-
 /**
  * Lossless API Client
  * Provides access to Tidal via the HiFi API (https://github.com/sachinsenal0x64/hifi)
@@ -256,12 +253,8 @@ class HiFiAPI(
         }
     }
 
-    private fun isHiResQuality(quality: AudioQuality): Boolean {
-        return quality.uppercase() == "HI_RES_LOSSLESS"
-    }
-
     private suspend fun resolveHiResStreamFromDash(trackId: Long): String {
-        val manifest = getDashManifest(trackId, "HI_RES_LOSSLESS")
+        val manifest = getDashManifest(trackId, AudioQuality.HIRES_LOSSLESS)
         if (manifest.kind == "flac") {
             val url = manifest.urls.firstOrNull { it.isNotEmpty() }
             if (url != null) {
@@ -384,7 +377,7 @@ class HiFiAPI(
     /**
      * Get track info and stream URL (with retries for quality fallback)
      */
-    suspend fun getTrack(id: Long, quality: AudioQuality = "LOSSLESS"): TrackLookup {
+    suspend fun getTrack(id: Long, quality: AudioQuality = AudioQuality.LOW): TrackLookup {
         val url = buildUrl("/track/?id=$id&quality=$quality")
         var lastError: Exception? = null
 
@@ -428,7 +421,7 @@ class HiFiAPI(
         throw lastError ?: Exception("Failed to get track")
     }
 
-    suspend fun getDashURL(trackId: Long, quality: AudioQuality = "HI_RES_LOSSLESS"): String{
+    suspend fun getDashURL(trackId: Long, quality: AudioQuality = AudioQuality.HIRES_LOSSLESS): String{
 
         val url = buildUrl("/dash/?id=$trackId&quality=$quality")
         return url
@@ -437,7 +430,7 @@ class HiFiAPI(
 
     suspend fun getDashManifest(
         trackId: Long,
-        quality: AudioQuality = "HI_RES_LOSSLESS"
+        quality: AudioQuality = AudioQuality.HIRES_LOSSLESS
     ): DashManifestResult {
         val url = buildUrl("/dash/?id=$trackId&quality=$quality")
         var lastError: Exception? = null
@@ -897,10 +890,10 @@ class HiFiAPI(
                 }
 
                 var trackCandidate: APITrack? = null
-                if (rawItem.containsKey("item") && rawItem["item"] is JsonObject) {
-                    trackCandidate = rawItem["item"]?.let { Json.decodeFromJsonElement<APITrack>(it) }
+                trackCandidate = if (rawItem.containsKey("item") && rawItem["item"] is JsonObject) {
+                    rawItem["item"]?.let { Json.decodeFromJsonElement<APITrack>(it) }
                 } else {
-                    trackCandidate = Json.decodeFromJsonElement<APITrack>(rawItem)
+                    Json.decodeFromJsonElement<APITrack>(rawItem)
                 }
 
                 if (trackCandidate != null) {
@@ -915,14 +908,12 @@ class HiFiAPI(
     /**
      * Get stream URL for a track
      */
-    suspend fun getStreamUrl(trackId: Long, quality: AudioQuality = "LOSSLESS"): String {
-        var currentQuality = quality
-        if (isHiResQuality(currentQuality)) {
+    suspend fun getStreamUrl(trackId: Long, quality: AudioQuality): String {
+        if (quality == AudioQuality.HIRES_LOSSLESS) {
             try {
                 return resolveHiResStreamFromDash(trackId)
             } catch (error: Exception) {
-                logMessage("Failed to resolve hi-res stream via DASH manifest $error")
-                currentQuality = "LOSSLESS"
+                throw error("Failed to resolve hi-res stream via DASH manifest $error")
             }
         }
 
@@ -930,7 +921,7 @@ class HiFiAPI(
 
         for (attempt in 1..3) {
             try {
-                val lookup = getTrack(trackId, currentQuality)
+                val lookup = getTrack(trackId, quality)
                 if (lookup.originalTrackUrl != null) {
                     return lookup.originalTrackUrl!!
                 }
@@ -1008,7 +999,7 @@ data class APITrack(
     val isrc: String? = null,
     val editable: Boolean = false,
     val explicit: Boolean = false,
-    val audioQuality: String,
+    val audioQuality: AudioQuality,
     val audioModes: List<String> = emptyList(),
     val upload: Boolean = false,
     val accessType: String? = null,
@@ -1024,7 +1015,7 @@ data class APITrack(
 @Serializable
 @JsonIgnoreUnknownKeys
 data class MediaMetadata(
-    val tags: List<String>
+    val tags: List<AudioQuality>
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -1071,7 +1062,7 @@ data class APIAlbum(
     val copyright: String? = null,
     val artist: APIArtist? = null,
     val artists: List<APIArtist> = emptyList(),
-    val audioQuality: String? = null,
+    val audioQuality: AudioQuality? = null,
     val audioModes: List<String>? = null,
     val url: String? = null,
     val vibrantColor: String? = null,
@@ -1109,7 +1100,7 @@ data class APIPlaylist(
 @JsonIgnoreUnknownKeys
 data class TrackInfo (
     val trackId: Long,
-    val audioQuality: String,
+    val audioQuality: AudioQuality,
     val audioMode: String,
     val manifest: String,
     val manifestMimeType: String,

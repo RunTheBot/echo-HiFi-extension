@@ -8,6 +8,7 @@ import dev.brahmkshatriya.echo.common.models.Playlist
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Track
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -24,9 +25,12 @@ object HiFiMapper {
      * Parse track from HiFi API response
      */
     fun parseTrack(apiTrack: APITrack): Track {
+
+        val qualitiesAvailable = apiTrack.mediaMetadata?.tags?.let { AudioQuality.getAllBelow(it) }
+
         return Track(
             id = apiTrack.id.toString(),
-            title = apiTrack.title,
+            title = apiTrack.title + if (qualitiesAvailable?.contains(AudioQuality.DOLBY_ATMOS) ?: false) " (Atmos)" else "",
             cover = apiTrack.album?.let { buildImageHolder(it.cover) },
             artists = apiTrack.artists.map { artist -> parseArtist(artist) },
             album = apiTrack.album?.let { album ->
@@ -49,10 +53,7 @@ object HiFiMapper {
             isExplicit = apiTrack.explicit,
             albumOrderNumber = apiTrack.trackNumber,
             extras = mapOf(
-                "MAX_QUALITY" to apiTrack.audioQuality,
-                "ALLOW_STREAMING" to apiTrack.allowStreaming.toString(),
-                "STREAM_READY" to apiTrack.streamReady.toString(),
-                "API_TRACK_JSON" to apiTrack.toString()
+                "QUALITIES_AVAILABLE" to Json.encodeToString(qualitiesAvailable)
             )
 //            isPlayable = (if (apiTrack.streamReady && apiTrack.allowStreaming) Track.Playable.Yes else Track.Playable.No) as Track.Playable
         )
