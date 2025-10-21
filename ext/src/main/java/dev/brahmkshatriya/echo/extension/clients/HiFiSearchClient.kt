@@ -5,10 +5,12 @@ import dev.brahmkshatriya.echo.common.models.Feed.Companion.toFeedData
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Tab
+import dev.brahmkshatriya.echo.extension.AudioQuality
 import dev.brahmkshatriya.echo.extension.HiFiAPI
 import dev.brahmkshatriya.echo.extension.HiFiMapper
 import dev.brahmkshatriya.echo.extension.TidalExtension
 import dev.brahmkshatriya.echo.extension.logMessage
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -122,6 +124,7 @@ class HiFiSearchClient(
         // Search for tracks
         try {
             val tracksResponse = hifiClient.searchTracks(query, limit = 50)
+            val serializedAtmos = Json.encodeToString(AudioQuality.DOLBY_ATMOS)
             if (tracksResponse.items.isNotEmpty()) {
                 shelves.add(
                     Shelf.Lists.Tracks(

@@ -378,7 +378,9 @@ class HiFiAPI(
      * Get track info and stream URL (with retries for quality fallback)
      */
     suspend fun getTrack(id: Long, quality: AudioQuality = AudioQuality.LOW): TrackLookup {
-        val url = buildUrl("/track/?id=$id&quality=$quality")
+
+
+        val url = buildUrl("/track/?id=$id&quality=${if (quality == AudioQuality.DOLBY_ATMOS) AudioQuality.LOW else quality}")
         var lastError: Exception? = null
 
         for (attempt in 1..3) {
@@ -415,7 +417,7 @@ class HiFiAPI(
                 throw lastError
             }
 
-            delay(2.0.pow(attempt.toDouble()).toLong() * 100L)
+            delay(200L * attempt)
         }
 
         throw lastError ?: Exception("Failed to get track")
