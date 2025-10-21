@@ -48,7 +48,7 @@ object HiFiMapper {
                     isExplicit = album.explicit == true
                 )
             },
-            duration = apiTrack.duration,
+            duration = apiTrack.duration*1000,
             isrc = apiTrack.isrc,
             isExplicit = apiTrack.explicit,
             albumOrderNumber = apiTrack.trackNumber,
