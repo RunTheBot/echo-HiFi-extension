@@ -48,6 +48,12 @@ object HiFiMapper {
             isrc = apiTrack.isrc,
             isExplicit = apiTrack.explicit,
             albumOrderNumber = apiTrack.trackNumber,
+            extras = mapOf(
+                "MAX_QUALITY" to apiTrack.audioQuality,
+                "ALLOW_STREAMING" to apiTrack.allowStreaming.toString(),
+                "STREAM_READY" to apiTrack.streamReady.toString(),
+                "API_TRACK_JSON" to apiTrack.toString()
+            )
 //            isPlayable = (if (apiTrack.streamReady && apiTrack.allowStreaming) Track.Playable.Yes else Track.Playable.No) as Track.Playable
         )
     }

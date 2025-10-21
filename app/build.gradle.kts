@@ -62,7 +62,7 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "dev.brahmkshatriya.echo.extension.$extId"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
 
         manifestPlaceholders.apply {

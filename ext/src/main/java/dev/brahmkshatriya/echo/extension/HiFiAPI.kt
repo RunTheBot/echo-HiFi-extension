@@ -1,6 +1,5 @@
 package dev.brahmkshatriya.echo.extension
 
-import dev.brahmkshatriya.echo.common.settings.Settings
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -117,8 +116,8 @@ class HiFiAPI(
         return null
     }
 
-    private fun prepareTrack(APITrack: APITrack): APITrack {
-        var normalized = APITrack
+    private fun prepareTrack(apiTrack: APITrack): APITrack {
+        var normalized = apiTrack
         // If artist is null but artists list exists, use first artist
         if (normalized.artist == null && normalized.artists.isNotEmpty()) {
             normalized = normalized.copy(artist = normalized.artists[0])
@@ -1009,7 +1008,7 @@ data class APITrack(
     val isrc: String? = null,
     val editable: Boolean = false,
     val explicit: Boolean = false,
-    val audioQuality: String = "LOSSLESS",
+    val audioQuality: String,
     val audioModes: List<String> = emptyList(),
     val upload: Boolean = false,
     val accessType: String? = null,
