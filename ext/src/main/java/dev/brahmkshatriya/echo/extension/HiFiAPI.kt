@@ -526,9 +526,9 @@ class HiFiAPI(
      * Get album details with track listing
      */
     suspend fun getAlbum(id: Long): Pair<APIAlbum, List<APITrack>> {
-        val response = fetch(buildUrl("l/album/?id=$id"))
+        val response = fetch(buildUrl("/album/?id=$id"))
         ensureNotRateLimited(response)
-        if (!response.isSuccessful) throw Exception("Failed to get album")
+        if (!response.isSuccessful) throw Exception("Failed to get album: ${response.code}")
         val data = response.body.string()
         val json = Json.parseToJsonElement(data)
 
@@ -592,7 +592,7 @@ class HiFiAPI(
     suspend fun getArtist(id: Long): Triple<APIArtist, List<APIAlbum>, List<APITrack>> {
         val response = fetch(buildUrl("/artist/?f=$id"))
         ensureNotRateLimited(response)
-        if (!response.isSuccessful) throw Exception("Failed to get artist")
+        if (!response.isSuccessful) throw Exception("Failed to get artist: ${response.code}")
         val data = response.body.string()
         val json = Json.parseToJsonElement(data)
         val entries = json as? JsonArray ?: listOf(json)
@@ -861,7 +861,7 @@ class HiFiAPI(
     suspend fun getPlaylist(uuid: String): Pair<APIPlaylist, List<APITrack>> {
         val response = fetch(buildUrl("/playlist/?id=$uuid"))
         ensureNotRateLimited(response)
-        if (!response.isSuccessful) throw Exception("Failed to get playlist")
+        if (!response.isSuccessful) throw Exception("Failed to get playlist: ${response.code}")
         val data = response.body.string()
         val json = Json.parseToJsonElement(data)
 
