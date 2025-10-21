@@ -80,7 +80,7 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
         } ?: throw IllegalStateException("QUALITIES_AVAILABLE not found in track extras")
 
         logMessage("Loading track with ID: ${track.id} and title: ${track.title} with available qualities: ${track.extras["QUALITIES_AVAILABLE"]}")
-        logMessage("Track Json: ${track.extras["API_TRACK_JSON"]}")
+//        logMessage("Track Json: ${track.extras["API_TRACK_JSON"]}")
 
 //        val streamables = qualityOptions.map { quality ->
 //
