@@ -30,6 +30,7 @@ enum class AudioQuality(val displayName: String, val isExclusive: Boolean = fals
     }
 
     override fun toString(): String {
-        return this.name // This will return "HI_RES_LOSSLESS", "LOSSLESS", etc.
+        // Honestly dumbass fucking workaround who tf made this API. ts is not using a enum internally
+        return if (this == AudioQuality.HIRES_LOSSLESS) "HI_RES_LOSSLESS" else this.name
     }
 }
