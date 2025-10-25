@@ -1,10 +1,10 @@
 package dev.brahmkshatriya.echo.extension.clients
 
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI
 import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.models.NetworkRequest
 import dev.brahmkshatriya.echo.extension.AudioQuality
-import dev.brahmkshatriya.echo.extension.HiFiAPI
 import dev.brahmkshatriya.echo.extension.logMessage
 import kotlinx.serialization.json.Json
 

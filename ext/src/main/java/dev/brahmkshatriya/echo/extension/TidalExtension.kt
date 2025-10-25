@@ -1,5 +1,6 @@
 package dev.brahmkshatriya.echo.extension
 
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI
 import dev.brahmkshatriya.echo.common.clients.AlbumClient
 import dev.brahmkshatriya.echo.common.clients.ArtistClient
 import dev.brahmkshatriya.echo.common.clients.ExtensionClient
@@ -22,10 +23,14 @@ import dev.brahmkshatriya.echo.common.settings.SettingTextInput
 import dev.brahmkshatriya.echo.common.settings.Settings
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parseArtist
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parsePlaylist
+import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
 import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient
 import dev.brahmkshatriya.echo.extension.clients.HiFiTrackClient
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import dev.brahmkshatriya.echo.extension.api.models.APIArtist
+import dev.brahmkshatriya.echo.extension.api.models.APIPlaylist
+import dev.brahmkshatriya.echo.extension.api.models.APITrack
 
 import okhttp3.OkHttpClient
 import kotlin.random.Random

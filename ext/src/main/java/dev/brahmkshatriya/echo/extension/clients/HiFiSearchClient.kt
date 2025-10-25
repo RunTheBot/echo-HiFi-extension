@@ -1,12 +1,12 @@
 package dev.brahmkshatriya.echo.extension.clients
 
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI
 import dev.brahmkshatriya.echo.common.models.Feed
 import dev.brahmkshatriya.echo.common.models.Feed.Companion.toFeedData
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Tab
 import dev.brahmkshatriya.echo.extension.AudioQuality
-import dev.brahmkshatriya.echo.extension.HiFiAPI
 import dev.brahmkshatriya.echo.extension.HiFiMapper
 import dev.brahmkshatriya.echo.extension.TidalExtension
 import dev.brahmkshatriya.echo.extension.logMessage

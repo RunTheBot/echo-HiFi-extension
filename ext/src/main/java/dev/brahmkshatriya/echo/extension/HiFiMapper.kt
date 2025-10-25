@@ -1,5 +1,9 @@
 package dev.brahmkshatriya.echo.extension
 
+import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
+import dev.brahmkshatriya.echo.extension.api.models.APIArtist
+import dev.brahmkshatriya.echo.extension.api.models.APIPlaylist
+import dev.brahmkshatriya.echo.extension.api.models.APITrack
 import dev.brahmkshatriya.echo.common.models.Album
 import dev.brahmkshatriya.echo.common.models.Artist
 import dev.brahmkshatriya.echo.common.models.Date
