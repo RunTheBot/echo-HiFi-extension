@@ -24,9 +24,7 @@ class HiFiSearchClient(
     private val hifiClient: HiFiAPI
 ) {
 
-    @Volatile
-    private var cachedSearchResults: Pair<String, List<Shelf>>? = null
-
+    // TODO: reimplement caching of search results
     /**
      * Get quick search suggestions (history + trending)
      */
@@ -85,18 +83,12 @@ class HiFiSearchClient(
     /**
      * Perform search and return results filtered by tab
      */
+    @Throws(Nothing::class)
     private suspend fun performSearchByTab(query: String, tab: Tab?): Feed.Data<Shelf> {
         try {
-            // Return from cache if available
-            if (tab?.id == "All") {
-                cachedSearchResults?.takeIf { it.first == query }?.second?.let {
-                    return it.toFeedData()
-                }
-            }
 
             // Not in cache for this tab, fetch and filter
             val allShelves = performCombinedSearch(query)
-            cachedSearchResults = query to allShelves
             
             // Filter based on current tab
             val filteredShelves = when (tab?.id) {
@@ -203,8 +195,7 @@ class HiFiSearchClient(
         try {
             // Do the initial fetch here to populate cache
             val allShelves = performCombinedSearch(query)
-            cachedSearchResults = query to allShelves
-            
+
             // Generate tabs based on what result types are available
             val tabs = mutableListOf(Tab("All", "All"))
             
