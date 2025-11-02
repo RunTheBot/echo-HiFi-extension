@@ -127,7 +127,7 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
         // Check if the track has an atmos version available
         // Match by exact title, artist IDs, and duration
         val artistIds = track.artists.map { it.id }
-        val durationSeconds = track.duration / 1000 // Convert from milliseconds to seconds
+        val durationSeconds = track.duration?.div(1000)!! // Convert from milliseconds to seconds
 
         AtmosMatcher.findAtmosMatch(track.title, artistIds, durationSeconds)?.let { atmosQualityID ->
             logMessage("Adding Atmos quality for track: '${track.title}' with Atmos Quality ID: $atmosQualityID")

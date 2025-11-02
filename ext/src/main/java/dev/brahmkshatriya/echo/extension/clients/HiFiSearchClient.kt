@@ -1,6 +1,7 @@
 package dev.brahmkshatriya.echo.extension.clients
 
 import dev.brahmkshatriya.echo.extension.api.HiFiAPI
+import dev.brahmkshatriya.echo.extension.api.models.APITrack
 import dev.brahmkshatriya.echo.common.models.Feed
 import dev.brahmkshatriya.echo.common.models.Feed.Companion.toFeedData
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
@@ -117,26 +118,53 @@ class HiFiSearchClient(
 
             // Separate Atmos and normal tracks
             val normalTracks = mutableListOf<Track>()
+            val atmosTracks = mutableListOf<APITrack>()
 
             tracksResponse.items.forEach { apiTrack ->
                 val qualitiesAvailable = apiTrack.mediaMetadata?.tags?.let { AudioQuality.getAllBelow(it) }
                 val hasAtmos = qualitiesAvailable?.contains(AudioQuality.DOLBY_ATMOS) ?: false
 
                 if (hasAtmos) {
-                    // Register Atmos track for matching with normal versions
-                    AtmosMatcher.registerAtmosTrack(apiTrack)
+                    atmosTracks.add(apiTrack)
                 } else {
-                    // Add to normal tracks list
                     normalTracks.add(HiFiMapper.parseTrack(apiTrack))
                 }
             }
 
-            if (normalTracks.isNotEmpty()) {
+            // Match Atmos tracks with normal versions
+            val unmatchedAtmosTracks = mutableListOf<Track>()
+            atmosTracks.forEach { atmosTrack ->
+                // Try to find a matching normal track
+                val artistIds = atmosTrack.artists.map { it.id.toString() }.sorted()
+                val durationSeconds = atmosTrack.duration.toLong()
+
+                val hasMatch = normalTracks.any { normalTrack ->
+                    normalTrack.title == atmosTrack.title &&
+                    normalTrack.artists.map { it.id }.sorted() == artistIds &&
+                    (normalTrack.duration?.div(1000)) == durationSeconds
+                }
+
+                if (hasMatch) {
+                    // Register for later use when loading track qualities
+                    AtmosMatcher.registerAtmosTrack(atmosTrack)
+                    logMessage("Matched Atmos track '${atmosTrack.title}' with normal version - will add as quality option")
+                } else {
+                    // No matching normal track, add as separate result
+                    AtmosMatcher.registerAtmosTrack(atmosTrack)
+                    unmatchedAtmosTracks.add(HiFiMapper.parseTrack(atmosTrack))
+                    logMessage("Atmos track '${atmosTrack.title}' has no matching normal version - adding as separate result")
+                }
+            }
+
+            // Combine normal and unmatched Atmos tracks (duplicates eliminated)
+            val finalTracks = normalTracks + unmatchedAtmosTracks
+
+            if (finalTracks.isNotEmpty()) {
                 shelves.add(
                     Shelf.Lists.Tracks(
                         id = "search_tracks",
                         title = "Tracks",
-                        list = normalTracks
+                        list = finalTracks
                     )
                 )
             }

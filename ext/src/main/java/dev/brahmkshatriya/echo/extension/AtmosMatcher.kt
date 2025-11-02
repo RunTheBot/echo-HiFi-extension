@@ -23,6 +23,9 @@ object AtmosMatcher {
     // Store Atmos track IDs by their matching key
     private val atmosTracksByKey = mutableMapOf<AtmosTrackKey, String>()
 
+    // Track which Atmos tracks have been matched with normal versions
+    private val matchedAtmosIds = mutableSetOf<String>()
+
     /**
      * Register an Atmos track for later matching
      * Stores the track with title, artist IDs, and duration as the key
@@ -56,17 +59,37 @@ object AtmosMatcher {
 
         val atmosId = atmosTracksByKey[key]
         if (atmosId != null) {
+            matchedAtmosIds.add(atmosId)
             logMessage("Found Atmos match for '$trackTitle' | Artists: $sortedArtistIds | Duration: ${durationSeconds}s -> ID: $atmosId")
         }
         return atmosId
     }
 
     /**
+     * Get all unmatched Atmos track IDs (those without corresponding normal versions)
+     */
+    fun getUnmatchedAtmosIds(): List<String> {
+        val unmatched = atmosTracksByKey.values.filter { it !in matchedAtmosIds }
+        unmatched.forEach { id ->
+            logMessage("Atmos track without normal version found - adding as separate track: ID $id")
+        }
+        return unmatched
+    }
+
+    /**
+     * Check if an Atmos track ID was matched with a normal version
+     */
+    fun isAtmosMatched(atmosId: String): Boolean {
+        return atmosId in matchedAtmosIds
+    }
+
+    /**
      * Clear all registered Atmos tracks
      */
     fun clear() {
-        logMessage("Clearing Atmos track registry (${atmosTracksByKey.size} tracks removed)")
+        logMessage("Clearing Atmos track registry (${atmosTracksByKey.size} tracks removed, ${matchedAtmosIds.size} were matched)")
         atmosTracksByKey.clear()
+        matchedAtmosIds.clear()
     }
 
     /**
