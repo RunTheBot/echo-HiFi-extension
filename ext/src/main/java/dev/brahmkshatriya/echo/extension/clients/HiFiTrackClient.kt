@@ -6,6 +6,7 @@ import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.models.NetworkRequest
 import dev.brahmkshatriya.echo.extension.AtmosMatcher
 import dev.brahmkshatriya.echo.extension.AudioQuality
+import dev.brahmkshatriya.echo.extension.TidalExtension
 import dev.brahmkshatriya.echo.extension.logMessage
 import kotlinx.serialization.json.Json
 
@@ -124,24 +125,25 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
             )
         }.toMutableList()
 
-        // Check if the track has an atmos version available
-        // Match by exact title, artist IDs, and duration
-        val artistIds = track.artists.map { it.id }
-        val durationSeconds = track.duration?.div(1000)!! // Convert from milliseconds to seconds
+        // Check if the track has an atmos version available (only if Atmos matching is enabled)
+        if (TidalExtension.isAtmosMatchingEnabled()) {
+            val artistIds = track.artists.map { it.id }
+            val durationSeconds = track.duration?.div(1000)!! // Convert from milliseconds to seconds
 
-        AtmosMatcher.findAtmosMatch(track.title, artistIds, durationSeconds)?.let { atmosQualityID ->
-            logMessage("Adding Atmos quality for track: '${track.title}' with Atmos Quality ID: $atmosQualityID")
-            streamables.add(
-                0,
-                Streamable.server(
-                    id = "$placeholderPrefix${atmosQualityID}:${AudioQuality.DOLBY_ATMOS}",
-                    quality = AudioQuality.DOLBY_ATMOS.ordinal,
-                    title = AudioQuality.DOLBY_ATMOS.displayName,
-                    extras = mapOf(
-                        "QUALITY" to Json.encodeToString(AudioQuality.DOLBY_ATMOS)
+            AtmosMatcher.findAtmosMatch(track.title, artistIds, durationSeconds)?.let { atmosQualityID ->
+                logMessage("Adding Atmos quality for track: '${track.title}' with Atmos Quality ID: $atmosQualityID")
+                streamables.add(
+                    0,
+                    Streamable.server(
+                        id = "$placeholderPrefix${atmosQualityID}:${AudioQuality.DOLBY_ATMOS}",
+                        quality = AudioQuality.DOLBY_ATMOS.ordinal,
+                        title = AudioQuality.DOLBY_ATMOS.displayName,
+                        extras = mapOf(
+                            "QUALITY" to Json.encodeToString(AudioQuality.DOLBY_ATMOS)
+                        )
                     )
                 )
-            )
+            }
         }
 
         return track.copy(

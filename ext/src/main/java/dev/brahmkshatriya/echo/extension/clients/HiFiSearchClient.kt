@@ -116,59 +116,76 @@ class HiFiSearchClient(
         try {
             val tracksResponse = hifiClient.searchTracks(query, limit = 50)
 
-            // Separate Atmos and normal tracks
-            val normalTracks = mutableListOf<Track>()
-            val atmosTracks = mutableListOf<APITrack>()
+            if (TidalExtension.isAtmosMatchingEnabled()) {
+                // Atmos matching enabled - separate and match tracks
+                val normalTracks = mutableListOf<Track>()
+                val atmosTracks = mutableListOf<APITrack>()
 
-            tracksResponse.items.forEach { apiTrack ->
-                val qualitiesAvailable = apiTrack.mediaMetadata?.tags?.let { AudioQuality.getAllBelow(it) }
-                val hasAtmos = qualitiesAvailable?.contains(AudioQuality.DOLBY_ATMOS) ?: false
+                tracksResponse.items.forEach { apiTrack ->
+                    val qualitiesAvailable = apiTrack.mediaMetadata?.tags?.let { AudioQuality.getAllBelow(it) }
+                    val hasAtmos = qualitiesAvailable?.contains(AudioQuality.DOLBY_ATMOS) ?: false
 
-                if (apiTrack.version != null) apiTrack.title = "${apiTrack.title} (${apiTrack.version})"
+                    if (apiTrack.version != null) apiTrack.title = "${apiTrack.title} (${apiTrack.version})"
 
-                if (hasAtmos) {
-                    atmosTracks.add(apiTrack)
-                } else {
-                    normalTracks.add(HiFiMapper.parseTrack(apiTrack))
-                }
-            }
-
-            // Match Atmos tracks with normal versions
-            val unmatchedAtmosTracks = mutableListOf<Track>()
-            atmosTracks.forEach { atmosTrack ->
-                // Try to find a matching normal track
-                val artistIds = atmosTrack.artists.map { it.id.toString() }.sorted()
-                val durationSeconds = atmosTrack.duration.toLong()
-
-                val hasMatch = normalTracks.any { normalTrack ->
-                    normalTrack.title == atmosTrack.title &&
-                    normalTrack.artists.map { it.id }.sorted() == artistIds &&
-                    (normalTrack.duration?.div(1000)) == durationSeconds
+                    if (hasAtmos) {
+                        atmosTracks.add(apiTrack)
+                    } else {
+                        normalTracks.add(HiFiMapper.parseTrack(apiTrack))
+                    }
                 }
 
-                if (hasMatch) {
-                    // Register for later use when loading track qualities
-                    AtmosMatcher.registerAtmosTrack(atmosTrack)
-                    logMessage("Matched Atmos track '${atmosTrack.title}' with normal version - will add as quality option")
-                } else {
-                    // No matching normal track, add as separate result
-                    AtmosMatcher.registerAtmosTrack(atmosTrack)
-                    unmatchedAtmosTracks.add(HiFiMapper.parseTrack(atmosTrack))
-                    logMessage("Atmos track '${atmosTrack.title}' has no matching normal version - adding as separate result")
+                // Match Atmos tracks with normal versions
+                val unmatchedAtmosTracks = mutableListOf<Track>()
+                atmosTracks.forEach { atmosTrack ->
+                    // Try to find a matching normal track
+                    val artistIds = atmosTrack.artists.map { it.id.toString() }.sorted()
+                    val durationSeconds = atmosTrack.duration.toLong()
+
+                    val hasMatch = normalTracks.any { normalTrack ->
+                        normalTrack.title == atmosTrack.title &&
+                        normalTrack.artists.map { it.id }.sorted() == artistIds &&
+                        (normalTrack.duration?.div(1000)) == durationSeconds
+                    }
+
+                    if (hasMatch) {
+                        // Register for later use when loading track qualities
+                        AtmosMatcher.registerAtmosTrack(atmosTrack)
+                        logMessage("Matched Atmos track '${atmosTrack.title}' with normal version - will add as quality option")
+                    } else {
+                        // No matching normal track, add as separate result
+                        AtmosMatcher.registerAtmosTrack(atmosTrack)
+                        unmatchedAtmosTracks.add(HiFiMapper.parseTrack(atmosTrack))
+                        logMessage("Atmos track '${atmosTrack.title}' has no matching normal version - adding as separate result")
+                    }
                 }
-            }
 
-            // Combine normal and unmatched Atmos tracks (duplicates eliminated)
-            val finalTracks = normalTracks + unmatchedAtmosTracks
+                // Combine normal and unmatched Atmos tracks (duplicates eliminated)
+                val finalTracks = normalTracks + unmatchedAtmosTracks
 
-            if (finalTracks.isNotEmpty()) {
-                shelves.add(
-                    Shelf.Lists.Tracks(
-                        id = "search_tracks",
-                        title = "Tracks",
-                        list = finalTracks
+                if (finalTracks.isNotEmpty()) {
+                    shelves.add(
+                        Shelf.Lists.Tracks(
+                            id = "search_tracks",
+                            title = "Tracks",
+                            list = finalTracks
+                        )
                     )
-                )
+                }
+            } else {
+                // Atmos matching disabled - return all tracks as-is
+                val allTracks = tracksResponse.items.map { apiTrack ->
+                    if (apiTrack.version != null) apiTrack.title = "${apiTrack.title} (${apiTrack.version})"
+                    HiFiMapper.parseTrack(apiTrack)
+                }
+                if (allTracks.isNotEmpty()) {
+                    shelves.add(
+                        Shelf.Lists.Tracks(
+                            id = "search_tracks",
+                            title = "Tracks",
+                            list = allTracks
+                        )
+                    )
+                }
             }
         } catch (e: Exception) {
             logMessage("Error searching tracks: ${e.message}")

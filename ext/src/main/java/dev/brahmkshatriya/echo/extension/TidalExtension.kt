@@ -25,6 +25,7 @@ import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.models.User
 import dev.brahmkshatriya.echo.common.settings.Setting
+import dev.brahmkshatriya.echo.common.settings.SettingSwitch
 import dev.brahmkshatriya.echo.common.settings.SettingTextInput
 import dev.brahmkshatriya.echo.common.settings.Settings
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parseArtist
@@ -64,6 +65,13 @@ class TidalExtension :
         private const val DEFAULT_ENDPOINT = "https://tidal.401658.xyz"
         private const val COUNTRY_CODE_KEY = "country_code"
         private const val DEFAULT_COUNTRY_CODE = "US"
+        private const val ATMOS_MATCHING_KEY = "atmos_matching_enabled"
+        private const val ATMOS_MATCHING_DEFAULT = false
+
+        fun isAtmosMatchingEnabled(): Boolean {
+            val value = HiFiSession.getInstance().settings?.getBoolean(ATMOS_MATCHING_KEY) ?: ATMOS_MATCHING_DEFAULT
+            return value
+        }
     }
 
     override suspend fun getSettingItems(): List<Setting> {
@@ -79,12 +87,19 @@ class TidalExtension :
                 key = COUNTRY_CODE_KEY,
                 summary = "Enter ISO two-letter country code (e.g., US, GB, DE)",
                 defaultValue = DEFAULT_COUNTRY_CODE,
+            ),
+            SettingSwitch(
+                title = "Atmos Matching",
+                key = ATMOS_MATCHING_KEY,
+                summary = "Match Atmos tracks with normal versions to provide Atmos as a quality option",
+                defaultValue = ATMOS_MATCHING_DEFAULT,
             )
         )
     }
 
     override fun setSettings(settings: Settings) {
         session.settings = settings
+        logMessage("Atmos matching feature: ${if (isAtmosMatchingEnabled()) "ENABLED" else "DISABLED"}")
     }
 
     override suspend fun onExtensionSelected() {
@@ -97,7 +112,7 @@ class TidalExtension :
         searchClient = HiFiSearchClient(this, hiFiAPI)
 
         logMessage("Tidal HiFi Extension initialized")
-        
+
         // Initialize extension - verify API connectivity if needed
 //        hiFiAPI.searchTracks("test", limit = 1)
     }
