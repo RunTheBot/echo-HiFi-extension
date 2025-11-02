@@ -5,6 +5,7 @@ import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.models.NetworkRequest
 import dev.brahmkshatriya.echo.extension.AudioQuality
+import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient.Companion.atmosMap
 import dev.brahmkshatriya.echo.extension.logMessage
 import kotlinx.serialization.json.Json
 
@@ -119,6 +120,22 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
                 title = quality.displayName,
                 extras = mapOf(
                     "QUALITY" to Json.encodeToString(quality)
+                )
+            )
+        }.toMutableList()
+
+        // Check if the track has an atmos version available
+        atmosMap[track.title]?.let { atmosQualityID ->
+            logMessage("Adding Atmos quality for track: '${track.title})' with Atmos Quality ID: $atmosQualityID")
+            streamables.add(
+                0,
+                Streamable.server(
+                    id = "$placeholderPrefix${atmosQualityID}:${AudioQuality.DOLBY_ATMOS}",
+                    quality = AudioQuality.DOLBY_ATMOS.ordinal,
+                    title = AudioQuality.DOLBY_ATMOS.displayName,
+                    extras = mapOf(
+                        "QUALITY" to Json.encodeToString(AudioQuality.DOLBY_ATMOS)
+                    )
                 )
             )
         }

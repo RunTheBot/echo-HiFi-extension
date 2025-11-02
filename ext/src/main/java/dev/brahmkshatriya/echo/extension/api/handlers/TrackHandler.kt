@@ -48,7 +48,7 @@ class TrackHandler(private val httpUtils: HttpUtils) {
             }
 
             val isTokenRetry = response.code == 401 && subStatus == 11002
-            val message = detail ?: "Failed to get track (status ${response.code})"
+            val message = detail ?: "Failed to get track (status ${response.code} at url: $url)"
             lastError = Exception(if (isTokenRetry) (userMessage ?: message) else message)
             val shouldRetry = isTokenRetry ||
                     (detail != null && Regex("quality not found", RegexOption.IGNORE_CASE).containsMatchIn(detail)) ||

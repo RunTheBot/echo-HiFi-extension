@@ -6,6 +6,7 @@ import dev.brahmkshatriya.echo.common.models.Feed.Companion.toFeedData
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Tab
+import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.extension.AudioQuality
 import dev.brahmkshatriya.echo.extension.HiFiMapper
 import dev.brahmkshatriya.echo.extension.TidalExtension
@@ -31,11 +32,7 @@ class HiFiSearchClient(
     suspend fun quickSearch(query: String): List<QuickSearchItem.Query> {
         return if (query.isBlank()) {
             // Return trending/popular searches
-            listOf(
-                QuickSearchItem.Query("Popular", false),
-                QuickSearchItem.Query("New Releases", false),
-                QuickSearchItem.Query("Charts", false)
-            )
+            listOf()
         } else {
             // Return query suggestions based on partial matches
             try {
@@ -112,17 +109,32 @@ class HiFiSearchClient(
      */
     private suspend fun performCombinedSearch(query: String): List<Shelf> {
         val shelves = mutableListOf<Shelf>()
-        
+
         // Search for tracks
         try {
             val tracksResponse = hifiClient.searchTracks(query, limit = 50)
-            val serializedAtmos = Json.encodeToString(AudioQuality.DOLBY_ATMOS)
-            if (tracksResponse.items.isNotEmpty()) {
+
+            // Loop over tracks to build Atmos map and separate normal tracks from Atmos tracks
+            val normalTracks = mutableListOf<Track>()
+
+            tracksResponse.items.forEach { apiTrack ->
+                val qualitiesAvailable = apiTrack.mediaMetadata?.tags?.let { AudioQuality.getAllBelow(it) }
+                val hasAtmos = qualitiesAvailable?.contains(AudioQuality.DOLBY_ATMOS) ?: false
+
+                if (hasAtmos) {
+                    atmosMap[apiTrack.title] = apiTrack.id.toString()
+                } else {
+                    // Add to normal tracks list
+                    normalTracks.add(HiFiMapper.parseTrack(apiTrack))
+                }
+            }
+
+            if (normalTracks.isNotEmpty()) {
                 shelves.add(
                     Shelf.Lists.Tracks(
                         id = "search_tracks",
                         title = "Tracks",
-                        list = tracksResponse.items.map { HiFiMapper.parseTrack(it) }
+                        list = normalTracks
                     )
                 )
             }
@@ -230,5 +242,10 @@ class HiFiSearchClient(
         } catch (e: Exception) {
             logMessage("Error deleting quick search: ${e.message}")
         }
+    }
+
+    companion object {
+        val atmosMap = HashMap<String, String>()
+
     }
 }

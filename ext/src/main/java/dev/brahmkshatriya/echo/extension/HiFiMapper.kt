@@ -46,8 +46,11 @@ object HiFiMapper {
                     trackCount = album.numberOfTracks,
                     duration = album.duration,
                     releaseDate = runCatching {
-                        val date = LocalDate.parse(album.releaseDate, DateTimeFormatter.ISO_LOCAL_DATE)
-                        Date(day = date.dayOfMonth, month = date.monthValue, year = date.year)
+                        album.releaseDate?.let { rd ->
+                            val date = LocalDate.parse(rd, DateTimeFormatter.ISO_LOCAL_DATE)
+                            logMessage("Parsed release date: $rd")
+                            Date(day = date.dayOfMonth, month = date.monthValue, year = date.year)
+                        }
                     }.getOrNull(),
                     isExplicit = album.explicit == true
                 )
