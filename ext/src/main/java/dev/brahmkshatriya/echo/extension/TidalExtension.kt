@@ -7,18 +7,20 @@ import dev.brahmkshatriya.echo.common.clients.ExtensionClient
 import dev.brahmkshatriya.echo.common.clients.HomeFeedClient
 import dev.brahmkshatriya.echo.common.clients.PlaylistClient
 import dev.brahmkshatriya.echo.common.clients.QuickSearchClient
+import dev.brahmkshatriya.echo.common.clients.RadioClient
 import dev.brahmkshatriya.echo.common.clients.TrackClient
 import dev.brahmkshatriya.echo.common.helpers.PagedData
 import dev.brahmkshatriya.echo.common.models.Album
 import dev.brahmkshatriya.echo.common.models.Artist
+import dev.brahmkshatriya.echo.common.models.EchoMediaItem
 import dev.brahmkshatriya.echo.common.models.Feed
 import dev.brahmkshatriya.echo.common.models.Playlist
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
+import dev.brahmkshatriya.echo.common.models.Radio
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.settings.Setting
-import dev.brahmkshatriya.echo.common.settings.SettingList
 import dev.brahmkshatriya.echo.common.settings.SettingTextInput
 import dev.brahmkshatriya.echo.common.settings.Settings
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parseArtist
@@ -26,14 +28,12 @@ import dev.brahmkshatriya.echo.extension.HiFiMapper.parsePlaylist
 import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
 import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient
 import dev.brahmkshatriya.echo.extension.clients.HiFiTrackClient
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import dev.brahmkshatriya.echo.extension.api.models.APIArtist
 import dev.brahmkshatriya.echo.extension.api.models.APIPlaylist
 import dev.brahmkshatriya.echo.extension.api.models.APITrack
+import dev.brahmkshatriya.echo.extension.clients.hifiRadioClient
 
 import okhttp3.OkHttpClient
-import kotlin.random.Random
 
 /**
  * Tidal HiFi Extension for Echo
@@ -47,7 +47,8 @@ class TidalExtension :
     ArtistClient,
     PlaylistClient,
     HomeFeedClient,
-    QuickSearchClient {
+    QuickSearchClient,
+    RadioClient {
 
     private val session by lazy { HiFiSession.getInstance() }
     private lateinit var hiFiAPI: HiFiAPI
@@ -57,6 +58,8 @@ class TidalExtension :
     companion object {
         private const val API_ENDPOINT_KEY = "api_endpoint"
         private const val DEFAULT_ENDPOINT = "https://tidal.401658.xyz"
+        private const val COUNTRY_CODE_KEY = "country_code"
+        private const val DEFAULT_COUNTRY_CODE = "US"
     }
 
     override suspend fun getSettingItems(): List<Setting> {
@@ -66,6 +69,12 @@ class TidalExtension :
                 key = API_ENDPOINT_KEY,
                 summary = "Select or enter the Tidal HiFi API endpoint URL",
                 defaultValue = DEFAULT_ENDPOINT,
+            ),
+            SettingTextInput(
+                title = "Country Code",
+                key = COUNTRY_CODE_KEY,
+                summary = "Enter ISO two-letter country code (e.g., US, GB, DE)",
+                defaultValue = DEFAULT_COUNTRY_CODE,
             )
         )
     }
@@ -248,4 +257,14 @@ class TidalExtension :
     override suspend fun deleteQuickSearch(item: QuickSearchItem) {
         searchClient.deleteQuickSearch(item)
     }
+
+    // ==================== RadioClient ====================
+
+    private val hifiRadioClient by lazy { hifiRadioClient() }
+
+    override suspend fun loadTracks(radio: Radio): Feed<Track> = hifiRadioClient.loadTracks(radio)
+
+    override suspend fun radio(item: EchoMediaItem, context: EchoMediaItem?): Radio = hifiRadioClient.radio(item, context)
+
+    override suspend fun loadRadio(radio: Radio): Radio  = radio
 }

@@ -69,7 +69,7 @@ data class APITrack(
     val artist: APIArtist? = null,
     val artists: List<APIArtist>,
     val album: APIAlbum? = null,
-    val mixes: Map<String, String>? = null,
+    val mixes: Map<String, String>,
     val mediaMetadata: MediaMetadata? = null
 )
 
