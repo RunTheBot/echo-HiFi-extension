@@ -61,7 +61,7 @@ data class APITrack(
     val isrc: String? = null,
     val editable: Boolean = false,
     val explicit: Boolean = false,
-    val audioQuality: AudioQuality,
+    val audioQuality: AudioQuality? = null,
     val audioModes: List<String> = emptyList(),
     val upload: Boolean = false,
     val accessType: String? = null,
@@ -69,7 +69,7 @@ data class APITrack(
     val artist: APIArtist? = null,
     val artists: List<APIArtist>,
     val album: APIAlbum? = null,
-    val mixes: Map<String, String>,
+    val mixes: Map<String, String>? = null,
     val mediaMetadata: MediaMetadata? = null
 )
 
