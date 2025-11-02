@@ -6,8 +6,10 @@ import dev.brahmkshatriya.echo.common.models.Radio
 import dev.brahmkshatriya.echo.common.models.Track
 
 class hifiRadioClient {
-    fun loadTracks(radio: Radio): Feed<Track> {}
+    fun loadTracks(radio: Radio): Feed<Track> {
+        TODO()
+    }
     fun radio(item: EchoMediaItem, context: EchoMediaItem?): Radio {
-
+        TODO()
     }
 }
