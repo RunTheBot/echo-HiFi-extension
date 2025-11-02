@@ -4,8 +4,8 @@ import dev.brahmkshatriya.echo.extension.api.HiFiAPI
 import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.models.NetworkRequest
+import dev.brahmkshatriya.echo.extension.AtmosMatcher
 import dev.brahmkshatriya.echo.extension.AudioQuality
-import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient.Companion.atmosMap
 import dev.brahmkshatriya.echo.extension.logMessage
 import kotlinx.serialization.json.Json
 
@@ -125,8 +125,12 @@ class HiFiTrackClient ( private val hiFiAPI: HiFiAPI )   {
         }.toMutableList()
 
         // Check if the track has an atmos version available
-        atmosMap[track.title]?.let { atmosQualityID ->
-            logMessage("Adding Atmos quality for track: '${track.title})' with Atmos Quality ID: $atmosQualityID")
+        // Match by exact title, artist IDs, and duration
+        val artistIds = track.artists.map { it.id }
+        val durationSeconds = track.duration / 1000 // Convert from milliseconds to seconds
+
+        AtmosMatcher.findAtmosMatch(track.title, artistIds, durationSeconds)?.let { atmosQualityID ->
+            logMessage("Adding Atmos quality for track: '${track.title}' with Atmos Quality ID: $atmosQualityID")
             streamables.add(
                 0,
                 Streamable.server(

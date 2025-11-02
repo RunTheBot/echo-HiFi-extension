@@ -7,6 +7,7 @@ import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Tab
 import dev.brahmkshatriya.echo.common.models.Track
+import dev.brahmkshatriya.echo.extension.AtmosMatcher
 import dev.brahmkshatriya.echo.extension.AudioQuality
 import dev.brahmkshatriya.echo.extension.HiFiMapper
 import dev.brahmkshatriya.echo.extension.TidalExtension
@@ -114,7 +115,7 @@ class HiFiSearchClient(
         try {
             val tracksResponse = hifiClient.searchTracks(query, limit = 50)
 
-            // Loop over tracks to build Atmos map and separate normal tracks from Atmos tracks
+            // Separate Atmos and normal tracks
             val normalTracks = mutableListOf<Track>()
 
             tracksResponse.items.forEach { apiTrack ->
@@ -122,7 +123,8 @@ class HiFiSearchClient(
                 val hasAtmos = qualitiesAvailable?.contains(AudioQuality.DOLBY_ATMOS) ?: false
 
                 if (hasAtmos) {
-                    atmosMap[apiTrack.title] = apiTrack.id.toString()
+                    // Register Atmos track for matching with normal versions
+                    AtmosMatcher.registerAtmosTrack(apiTrack)
                 } else {
                     // Add to normal tracks list
                     normalTracks.add(HiFiMapper.parseTrack(apiTrack))
@@ -242,10 +244,5 @@ class HiFiSearchClient(
         } catch (e: Exception) {
             logMessage("Error deleting quick search: ${e.message}")
         }
-    }
-
-    companion object {
-        val atmosMap = HashMap<String, String>()
-
     }
 }
