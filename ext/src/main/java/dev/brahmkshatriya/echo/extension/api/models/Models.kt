@@ -39,7 +39,7 @@ interface TrackLookup {
 @JsonIgnoreUnknownKeys
 data class APITrack(
     val id: Long,
-    val title: String,
+    var title: String,
     val duration: Long,
     val replayGain: Double? = null,
     val peak: Double? = null,

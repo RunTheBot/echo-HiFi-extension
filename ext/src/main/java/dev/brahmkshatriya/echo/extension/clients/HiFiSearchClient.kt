@@ -124,6 +124,8 @@ class HiFiSearchClient(
                 val qualitiesAvailable = apiTrack.mediaMetadata?.tags?.let { AudioQuality.getAllBelow(it) }
                 val hasAtmos = qualitiesAvailable?.contains(AudioQuality.DOLBY_ATMOS) ?: false
 
+                if (apiTrack.version != null) apiTrack.title = "${apiTrack.title} (${apiTrack.version})"
+
                 if (hasAtmos) {
                     atmosTracks.add(apiTrack)
                 } else {

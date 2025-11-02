@@ -34,7 +34,7 @@ object HiFiMapper {
 
         return Track(
             id = apiTrack.id.toString(),
-            title = apiTrack.title + if (apiTrack.version != null) " (${apiTrack.version})" else "" + if (qualitiesAvailable?.contains(AudioQuality.DOLBY_ATMOS) ?: false) " (Atmos)" else "",
+            title = apiTrack.title + if (qualitiesAvailable?.contains(AudioQuality.DOLBY_ATMOS) ?: false) " (Atmos)" else "",
             cover = apiTrack.album?.let { buildImageHolder(it.cover) },
             artists = apiTrack.artists.map { artist -> parseArtist(artist) },
             album = apiTrack.album?.let { album ->
