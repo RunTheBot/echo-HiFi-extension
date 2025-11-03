@@ -53,12 +53,14 @@ class TidalExtension :
     PlaylistClient,
     HomeFeedClient,
     QuickSearchClient,
-    RadioClient {
+    RadioClient,
+    LoginClient.WebView {
 
     private val session by lazy { HiFiSession.getInstance() }
     private lateinit var hiFiAPI: HiFiAPI
     private val httpClient = OkHttpClient()
     private lateinit var searchClient: HiFiSearchClient
+    private var user: User? = null
 
     companion object {
         private const val API_ENDPOINT_KEY = "api_endpoint"
@@ -286,4 +288,59 @@ class TidalExtension :
     override suspend fun radio(item: EchoMediaItem, context: EchoMediaItem?): Radio = hifiRadioClient.radio(item, context)
 
     override suspend fun loadRadio(radio: Radio): Radio  = radio
+
+    // ==================== LoginClient.WebView ====================
+
+    override val webViewRequest = object : WebViewRequest.Evaluate<List<User>> {
+        override val javascriptToEvaluateOnPageStart = """
+            function() {
+                'use strict';
+                const origFetch = window.fetch;
+                window.fetch = async (...args) => {
+                    const [resource] = args;
+                    const url = typeof resource === 'string' ? resource : resource.url;
+                    const res = await origFetch(...args);
+                    if (url.includes('oauth2/token')) window.TOKEN = await res.clone().text();
+                    return res;
+                };
+            }
+        """.trimIndent()
+
+        override val javascriptToEvaluate = "function() { return window.TOKEN; }"
+
+        override suspend fun onStop(url: NetworkRequest, data: String?): List<User>? {
+            if (data.isNullOrEmpty()) return null
+
+            try {
+                // Parse the token response
+                // For now, create a user with generic information
+                val user = User(
+                    id = "tidal_user",
+                    name = "Tidal User",
+                    subtitle = "Logged in",
+                    cover = null,
+                    extras = mapOf("token" to data)
+                )
+                return listOf(user)
+            } catch (e: Exception) {
+                logMessage("Error parsing login response: ${e.message}")
+                return null
+            }
+        }
+
+        override val initialUrl = NetworkRequest(
+            url = "https://tidal.com/",
+            method = NetworkRequest.Method.GET,
+            headers = emptyMap(),
+            bodyBase64 = null
+        )
+
+        override val stopUrlRegex = Regex(".*oauth2/me.*")
+    }
+
+    override fun setLoginUser(user: User?) {
+        this.user = user
+    }
+
+    override suspend fun getCurrentUser() = user?.copy(extras = mapOf())
 }
