@@ -1,6 +1,6 @@
 package dev.brahmkshatriya.echo.extension.clients
 
-import dev.brahmkshatriya.echo.extension.api.HiFiAPI
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.HiFiAPI
 import dev.brahmkshatriya.echo.common.models.Streamable
 import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.models.NetworkRequest

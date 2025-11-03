@@ -1,9 +1,9 @@
-package dev.brahmkshatriya.echo.extension.api.handlers
+package dev.brahmkshatriya.echo.extension.api.HiFiAPI.handlers
 
-import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
-import dev.brahmkshatriya.echo.extension.api.models.APITrack
-import dev.brahmkshatriya.echo.extension.api.utils.HttpUtils
-import dev.brahmkshatriya.echo.extension.api.utils.ResponseNormalizer
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIAlbum
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APITrack
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils.HttpUtils
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils.ResponseNormalizer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject

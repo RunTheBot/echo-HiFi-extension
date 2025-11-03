@@ -1,22 +1,16 @@
 package dev.brahmkshatriya.echo.extension
 
-import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
-import dev.brahmkshatriya.echo.extension.api.models.APIArtist
-import dev.brahmkshatriya.echo.extension.api.models.APIPlaylist
-import dev.brahmkshatriya.echo.extension.api.models.APITrack
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIAlbum
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIArtist
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIPlaylist
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APITrack
 import dev.brahmkshatriya.echo.common.models.Album
 import dev.brahmkshatriya.echo.common.models.Artist
 import dev.brahmkshatriya.echo.common.models.Date
 import dev.brahmkshatriya.echo.common.models.ImageHolder
 import dev.brahmkshatriya.echo.common.models.Playlist
-import dev.brahmkshatriya.echo.common.models.QuickSearchItem
-import dev.brahmkshatriya.echo.common.models.Shelf
 import dev.brahmkshatriya.echo.common.models.Track
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 

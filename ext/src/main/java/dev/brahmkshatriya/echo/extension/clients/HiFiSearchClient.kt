@@ -1,7 +1,7 @@
 package dev.brahmkshatriya.echo.extension.clients
 
-import dev.brahmkshatriya.echo.extension.api.HiFiAPI
-import dev.brahmkshatriya.echo.extension.api.models.APITrack
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.HiFiAPI
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APITrack
 import dev.brahmkshatriya.echo.common.models.Feed
 import dev.brahmkshatriya.echo.common.models.Feed.Companion.toFeedData
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
@@ -13,10 +13,6 @@ import dev.brahmkshatriya.echo.extension.AudioQuality
 import dev.brahmkshatriya.echo.extension.HiFiMapper
 import dev.brahmkshatriya.echo.extension.TidalExtension
 import dev.brahmkshatriya.echo.extension.logMessage
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * HiFi Search Client

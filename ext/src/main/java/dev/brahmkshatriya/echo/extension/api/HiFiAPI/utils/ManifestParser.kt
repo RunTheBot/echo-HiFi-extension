@@ -1,6 +1,7 @@
-package dev.brahmkshatriya.echo.extension.api.utils
+package dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -19,7 +20,7 @@ object ManifestParser {
         return try {
             val decoded = String(Base64.getDecoder().decode(manifest))
             try {
-                val json = kotlinx.serialization.json.Json.parseToJsonElement(decoded) as? JsonObject
+                val json = Json.parseToJsonElement(decoded) as? JsonObject
                 val urls = json?.get("urls")?.jsonArray
                 if (urls != null && urls.isNotEmpty()) {
                     urls[0].jsonPrimitive.content
@@ -73,7 +74,7 @@ object ManifestParser {
     fun extractUrlsFromDashJsonPayload(payload: Any?): List<String> {
         if (payload !is JsonObject) return emptyList()
         val candidate = payload["urls"]
-        if (candidate !is kotlinx.serialization.json.JsonArray) return emptyList()
+        if (candidate !is JsonArray) return emptyList()
         return candidate.mapNotNull { entry ->
             entry.jsonPrimitive.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
         }

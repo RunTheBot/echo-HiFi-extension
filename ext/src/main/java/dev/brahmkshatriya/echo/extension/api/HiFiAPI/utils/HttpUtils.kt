@@ -1,4 +1,4 @@
-package dev.brahmkshatriya.echo.extension.api.utils
+package dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils
 
 import dev.brahmkshatriya.echo.extension.HiFiSession
 import okhttp3.OkHttpClient

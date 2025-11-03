@@ -1,4 +1,4 @@
-package dev.brahmkshatriya.echo.extension.api.models
+package dev.brahmkshatriya.echo.extension.api.HiFiAPI.models
 
 import dev.brahmkshatriya.echo.extension.AudioQuality
 import kotlinx.serialization.ExperimentalSerializationApi

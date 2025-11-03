@@ -1,20 +1,20 @@
-package dev.brahmkshatriya.echo.extension.api
+package dev.brahmkshatriya.echo.extension.api.HiFiAPI
 
 import dev.brahmkshatriya.echo.extension.AudioQuality
-import dev.brahmkshatriya.echo.extension.api.handlers.AlbumHandler
-import dev.brahmkshatriya.echo.extension.api.handlers.ArtistHandler
-import dev.brahmkshatriya.echo.extension.api.handlers.PlaylistHandler
-import dev.brahmkshatriya.echo.extension.api.handlers.SearchHandler
-import dev.brahmkshatriya.echo.extension.api.handlers.StreamHandler
-import dev.brahmkshatriya.echo.extension.api.handlers.TrackHandler
-import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
-import dev.brahmkshatriya.echo.extension.api.models.APIArtist
-import dev.brahmkshatriya.echo.extension.api.models.APIPlaylist
-import dev.brahmkshatriya.echo.extension.api.models.APITrack
-import dev.brahmkshatriya.echo.extension.api.models.DashManifestResult
-import dev.brahmkshatriya.echo.extension.api.models.SearchResponse
-import dev.brahmkshatriya.echo.extension.api.models.TrackLookup
-import dev.brahmkshatriya.echo.extension.api.utils.HttpUtils
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.handlers.AlbumHandler
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.handlers.ArtistHandler
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.handlers.PlaylistHandler
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.handlers.SearchHandler
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.handlers.StreamHandler
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.handlers.TrackHandler
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIAlbum
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIArtist
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIPlaylist
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APITrack
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.DashManifestResult
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.SearchResponse
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.TrackLookup
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils.HttpUtils
 import okhttp3.OkHttpClient
 
 /**
@@ -137,4 +137,3 @@ class HiFiAPI(
         return streamHandler.getDashManifest(trackId, quality)
     }
 }
-

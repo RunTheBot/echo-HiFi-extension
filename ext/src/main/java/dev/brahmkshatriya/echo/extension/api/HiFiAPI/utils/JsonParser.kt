@@ -1,8 +1,5 @@
-package dev.brahmkshatriya.echo.extension.api.utils
+package dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils
 
-import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
-import dev.brahmkshatriya.echo.extension.api.models.APIArtist
-import dev.brahmkshatriya.echo.extension.api.models.APITrack
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -17,7 +14,7 @@ object JsonParser {
      */
     fun <T> parseJsonSafely(payload: String): T? {
         return try {
-            kotlinx.serialization.json.Json.parseToJsonElement(payload) as? T
+            Json.parseToJsonElement(payload) as? T
         } catch (error: Exception) {
             logMessage("Failed to parse JSON payload: $error")
             null

@@ -1,6 +1,6 @@
 package dev.brahmkshatriya.echo.extension
 
-import dev.brahmkshatriya.echo.extension.api.models.APITrack
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APITrack
 
 /**
  * Atmos matching system

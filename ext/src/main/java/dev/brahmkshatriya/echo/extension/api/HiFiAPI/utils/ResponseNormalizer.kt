@@ -1,14 +1,11 @@
-package dev.brahmkshatriya.echo.extension.api.utils
+package dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils
 
-import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
-import dev.brahmkshatriya.echo.extension.api.models.APIArtist
-import dev.brahmkshatriya.echo.extension.api.models.APITrack
-import dev.brahmkshatriya.echo.extension.api.models.SearchResponse
-import kotlinx.serialization.json.Json
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIAlbum
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIArtist
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APITrack
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.SearchResponse
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 

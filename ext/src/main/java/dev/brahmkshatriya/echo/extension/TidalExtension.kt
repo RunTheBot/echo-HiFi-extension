@@ -1,6 +1,6 @@
 package dev.brahmkshatriya.echo.extension
 
-import dev.brahmkshatriya.echo.extension.api.HiFiAPI
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.HiFiAPI
 import dev.brahmkshatriya.echo.common.clients.AlbumClient
 import dev.brahmkshatriya.echo.common.clients.ArtistClient
 import dev.brahmkshatriya.echo.common.clients.ExtensionClient
@@ -17,6 +17,7 @@ import dev.brahmkshatriya.echo.common.models.Artist
 import dev.brahmkshatriya.echo.common.models.EchoMediaItem
 import dev.brahmkshatriya.echo.common.models.Feed
 import dev.brahmkshatriya.echo.common.models.NetworkRequest
+import dev.brahmkshatriya.echo.common.models.NetworkRequest.Companion.toGetRequest
 import dev.brahmkshatriya.echo.common.models.Playlist
 import dev.brahmkshatriya.echo.common.models.QuickSearchItem
 import dev.brahmkshatriya.echo.common.models.Radio
@@ -30,12 +31,16 @@ import dev.brahmkshatriya.echo.common.settings.SettingTextInput
 import dev.brahmkshatriya.echo.common.settings.Settings
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parseArtist
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parsePlaylist
-import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIAlbum
 import dev.brahmkshatriya.echo.extension.clients.HiFiSearchClient
 import dev.brahmkshatriya.echo.extension.clients.HiFiTrackClient
-import dev.brahmkshatriya.echo.extension.api.models.APIArtist
-import dev.brahmkshatriya.echo.extension.api.models.APIPlaylist
-import dev.brahmkshatriya.echo.extension.api.models.APITrack
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIArtist
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIPlaylist
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APITrack
+import dev.brahmkshatriya.echo.extension.api.official.TidalApi
+import dev.brahmkshatriya.echo.extension.api.official.TidalApi.Companion.JSON
+import dev.brahmkshatriya.echo.extension.api.official.models.ImageSize
+import dev.brahmkshatriya.echo.extension.api.official.models.TokenResponse
 import dev.brahmkshatriya.echo.extension.clients.hifiRadioClient
 
 import okhttp3.OkHttpClient
@@ -305,41 +310,31 @@ class TidalExtension :
                 };
             }
         """.trimIndent()
-
         override val javascriptToEvaluate = "function() { return window.TOKEN; }"
-
         override suspend fun onStop(url: NetworkRequest, data: String?): List<User>? {
-            if (data.isNullOrEmpty()) return null
-
-            try {
-                // Parse the token response
-                // For now, create a user with generic information
-                val user = User(
-                    id = "tidal_user",
-                    name = "Tidal User",
-                    subtitle = "Logged in",
-                    cover = null,
-                    extras = mapOf("token" to data)
-                )
-                return listOf(user)
-            } catch (e: Exception) {
-                logMessage("Error parsing login response: ${e.message}")
-                return null
-            }
+            val json = JSON.decodeFromString<TokenResponse>(data ?: "")
+            val api = TidalApi()
+            api.refreshToken = json.refreshToken
+            val artistId = api.users(json.userID!!.toString()).artistID!!.toString()
+            val artistItem = api.artist(artistId).item!!.data!!
+            val user = User(
+                id = json.userID.toString(),
+                name = artistItem.name ?: "Tidal User",
+                subtitle = artistItem.handle?.let { "@$it" } ?: json.user?.email,
+                cover = artistItem.picture?.toImage(ImageSize.MEDIUM, false),
+                extras = mapOf("refreshToken" to (json.refreshToken!!))
+            )
+            return listOf(user)
         }
 
-        override val initialUrl = NetworkRequest(
-            url = "https://tidal.com/",
-            method = NetworkRequest.Method.GET,
-            headers = emptyMap(),
-            bodyBase64 = null
-        )
-
+        override val initialUrl = "https://tidal.com/".toGetRequest()
         override val stopUrlRegex = Regex(".*oauth2/me.*")
     }
 
     override fun setLoginUser(user: User?) {
         this.user = user
+        api.clear()
+        api.refreshToken = user?.run { extras["refreshToken"]!! }
     }
 
     override suspend fun getCurrentUser() = user?.copy(extras = mapOf())

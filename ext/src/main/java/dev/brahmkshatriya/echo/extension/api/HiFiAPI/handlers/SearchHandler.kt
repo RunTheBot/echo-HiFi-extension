@@ -1,17 +1,17 @@
-package dev.brahmkshatriya.echo.extension.api.handlers
+package dev.brahmkshatriya.echo.extension.api.HiFiAPI.handlers
 
-import dev.brahmkshatriya.echo.extension.api.models.APIAlbum
-import dev.brahmkshatriya.echo.extension.api.models.APIArtist
-import dev.brahmkshatriya.echo.extension.api.models.APIPlaylist
-import dev.brahmkshatriya.echo.extension.api.models.APITrack
-import dev.brahmkshatriya.echo.extension.api.models.SearchResponse
-import dev.brahmkshatriya.echo.extension.api.utils.HttpUtils
-import dev.brahmkshatriya.echo.extension.api.utils.ResponseNormalizer
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIAlbum
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIArtist
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIPlaylist
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APITrack
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.SearchResponse
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils.HttpUtils
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils.ResponseNormalizer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonArray
 import java.net.URLEncoder
 
 /**
@@ -55,7 +55,7 @@ class SearchHandler(private val httpUtils: HttpUtils) {
         val normalized = ResponseNormalizer.normalizeSearchResponse<JsonObject>(json, "artists")
         val deserializedItems = normalized.items.map { item ->
             try {
-                ResponseNormalizer.normalizeArtist(Json.decodeFromJsonElement<APIArtist>(item as kotlinx.serialization.json.JsonElement))
+                ResponseNormalizer.normalizeArtist(Json.decodeFromJsonElement<APIArtist>(item as JsonElement))
             } catch (e: Exception) {
                 throw e
             }
@@ -74,7 +74,7 @@ class SearchHandler(private val httpUtils: HttpUtils) {
         if (!response.isSuccessful) throw Exception("Failed to search albums")
 
         val data = response.body.string()
-        val json = kotlinx.serialization.json.Json.parseToJsonElement(data) as JsonObject
+        val json = Json.parseToJsonElement(data) as JsonObject
         val normalized = ResponseNormalizer.normalizeSearchResponse<JsonObject>(json, "albums")
         val deserializedItems = normalized.items.map { item ->
             try {
@@ -97,7 +97,7 @@ class SearchHandler(private val httpUtils: HttpUtils) {
         if (!response.isSuccessful) throw Exception("Failed to search playlists")
 
         val data = response.body.string()
-        val json = kotlinx.serialization.json.Json.parseToJsonElement(data) as JsonObject
+        val json = Json.parseToJsonElement(data) as JsonObject
         val normalized = ResponseNormalizer.normalizeSearchResponse<JsonObject>(json, "playlists")
         val deserializedItems = normalized.items.map { item ->
             try {

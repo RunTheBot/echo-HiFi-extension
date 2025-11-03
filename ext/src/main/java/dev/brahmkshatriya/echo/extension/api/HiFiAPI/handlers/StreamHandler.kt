@@ -1,9 +1,9 @@
-package dev.brahmkshatriya.echo.extension.api.handlers
+package dev.brahmkshatriya.echo.extension.api.HiFiAPI.handlers
 
 import dev.brahmkshatriya.echo.extension.AudioQuality
-import dev.brahmkshatriya.echo.extension.api.models.DashManifestResult
-import dev.brahmkshatriya.echo.extension.api.utils.HttpUtils
-import dev.brahmkshatriya.echo.extension.api.utils.ManifestParser
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.DashManifestResult
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils.HttpUtils
+import dev.brahmkshatriya.echo.extension.api.HiFiAPI.utils.ManifestParser
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -155,7 +155,7 @@ class StreamHandler(
 
     private fun <T> parseJsonSafely(payload: String): T? {
         return try {
-            kotlinx.serialization.json.Json.parseToJsonElement(payload) as? T
+            Json.parseToJsonElement(payload) as? T
         } catch (error: Exception) {
             logMessage("Failed to parse JSON payload from DASH response: $error")
             null
