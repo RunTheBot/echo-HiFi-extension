@@ -125,7 +125,7 @@ object HiFiMapper {
     /**
      * Build ImageHolder from UUID (Tidal uses UUID for images)
      */
-    private fun buildImageHolder(uuid: String, size: String = "750x750"): ImageHolder? {
+    public fun buildImageHolder(uuid: String, size: String = "750x750"): ImageHolder? {
         return try {
             val formattedUuid = uuid.replace("-", "/")
             val url = "https://resources.tidal.com/images/$formattedUuid/$size.jpg"

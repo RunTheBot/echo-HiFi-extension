@@ -29,6 +29,7 @@ import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.SettingSwitch
 import dev.brahmkshatriya.echo.common.settings.SettingTextInput
 import dev.brahmkshatriya.echo.common.settings.Settings
+import dev.brahmkshatriya.echo.extension.HiFiMapper.buildImageHolder
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parseArtist
 import dev.brahmkshatriya.echo.extension.HiFiMapper.parsePlaylist
 import dev.brahmkshatriya.echo.extension.api.HiFiAPI.models.APIAlbum
@@ -62,6 +63,8 @@ class TidalExtension :
     LoginClient.WebView {
 
     private val session by lazy { HiFiSession.getInstance() }
+
+    val officialAPI by lazy { TidalApi() }
     private lateinit var hiFiAPI: HiFiAPI
     private val httpClient = OkHttpClient()
     private lateinit var searchClient: HiFiSearchClient
@@ -321,7 +324,7 @@ class TidalExtension :
                 id = json.userID.toString(),
                 name = artistItem.name ?: "Tidal User",
                 subtitle = artistItem.handle?.let { "@$it" } ?: json.user?.email,
-                cover = artistItem.picture?.toImage(ImageSize.MEDIUM, false),
+                cover = artistItem.picture?.let { buildImageHolder(it) },
                 extras = mapOf("refreshToken" to (json.refreshToken!!))
             )
             return listOf(user)
@@ -333,9 +336,10 @@ class TidalExtension :
 
     override fun setLoginUser(user: User?) {
         this.user = user
-        api.clear()
-        api.refreshToken = user?.run { extras["refreshToken"]!! }
+        officialAPI.clear()
+        officialAPI.refreshToken = user?.run { extras["refreshToken"]!! }
     }
 
     override suspend fun getCurrentUser() = user?.copy(extras = mapOf())
+
 }
