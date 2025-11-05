@@ -16,6 +16,8 @@ import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
+// Completely stolen from: https://github.com/brahmkshatriya/echo-tidal-extension/
+
 class TidalApi {
     companion object {
         const val DEVICE_TYPE = "BROWSER"

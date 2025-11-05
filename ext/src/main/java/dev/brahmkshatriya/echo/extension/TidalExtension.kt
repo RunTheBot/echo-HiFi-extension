@@ -16,6 +16,7 @@ import dev.brahmkshatriya.echo.common.models.Album
 import dev.brahmkshatriya.echo.common.models.Artist
 import dev.brahmkshatriya.echo.common.models.EchoMediaItem
 import dev.brahmkshatriya.echo.common.models.Feed
+import dev.brahmkshatriya.echo.common.models.Feed.Companion.toFeed
 import dev.brahmkshatriya.echo.common.models.NetworkRequest
 import dev.brahmkshatriya.echo.common.models.NetworkRequest.Companion.toGetRequest
 import dev.brahmkshatriya.echo.common.models.Playlist
@@ -43,6 +44,8 @@ import dev.brahmkshatriya.echo.extension.api.official.TidalApi.Companion.JSON
 import dev.brahmkshatriya.echo.extension.api.official.models.ImageSize
 import dev.brahmkshatriya.echo.extension.api.official.models.TokenResponse
 import dev.brahmkshatriya.echo.extension.clients.hifiRadioClient
+import dev.brahmkshatriya.echo.common.helpers.Page
+
 
 import okhttp3.OkHttpClient
 
@@ -256,14 +259,9 @@ class TidalExtension :
 
     // ==================== HomeFeedClient ====================
 
-    override suspend fun loadHomeFeed(): Feed<Shelf> {
-        // Return empty feed for now
-        return Feed(
-            tabs = emptyList(),
-            getPagedData = { Feed.Data(PagedData.Single { emptyList<Shelf>() }) }
-        )
-    }
-
+    override suspend fun loadHomeFeed() = PagedData.Continuous {
+        officialAPI.home().run { Page(toShelves(ImageSize.MEDIUM), page?.cursor) }
+    }.toFeed()
     // ==================== QuickSearchClient ====================
 
     /**
