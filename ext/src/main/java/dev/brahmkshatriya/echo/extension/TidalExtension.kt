@@ -335,7 +335,7 @@ class TidalExtension :
     override fun setLoginUser(user: User?) {
         this.user = user
         officialAPI.clear()
-        officialAPI.refreshToken = user?.run { extras["refreshToken"]!! }
+        officialAPI.refreshToken = user?.extras?.get("refreshToken")
     }
 
     override suspend fun getCurrentUser() = user?.copy(extras = mapOf())
