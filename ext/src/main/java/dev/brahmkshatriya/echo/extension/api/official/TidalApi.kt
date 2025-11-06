@@ -116,13 +116,10 @@ class TidalApi {
             "v2/home/feed/static",
             if (cursor != null) mapOf("cursor" to cursor) else mapOf()
         )
-        else {
-            logMessage("no token")
-            throw Exception("no token")
-        }/*request(
+        else request(
             "v2/home/feed/static",
             if (cursor != null) mapOf("cursor" to cursor) else mapOf()
-        )*/
+        )
         val res = call(req.build())
         logMessage("Tidal Home Response: $res")
         return JSON.decodeFromString(res)
