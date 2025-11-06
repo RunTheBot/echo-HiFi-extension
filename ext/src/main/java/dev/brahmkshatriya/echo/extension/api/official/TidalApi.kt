@@ -8,6 +8,7 @@ import dev.brahmkshatriya.echo.extension.api.official.models.PagesResponse
 import dev.brahmkshatriya.echo.extension.api.official.models.SearchResponse
 import dev.brahmkshatriya.echo.extension.api.official.models.TokenResponse
 import dev.brahmkshatriya.echo.extension.api.official.models.UserResponse
+import dev.brahmkshatriya.echo.extension.logMessage
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -26,9 +27,9 @@ class TidalApi {
     }
 
     var locale = "en_US"
-    var countryCode = "US"
+    var countryCode = "CA"
 
-    val version = "2025.10.16"
+    val version = "2025.10.29"
     val clientId = "txNoH4kkV41MfH25"
     val clientSecret = "dQjy0MinCEvxi1O4UmxvxWnDjt4cgHBPw8ll6nYBk98="
 
@@ -110,12 +111,20 @@ class TidalApi {
         .header("Authorization", "Bearer ${accessToken()}")
 
     suspend fun home(cursor: String? = null): Page {
-        val req = if (refreshToken != null) authReq("v2/home/feed/static")
-        else request(
+
+        val req = if (refreshToken != null) authReq(
             "v2/home/feed/static",
             if (cursor != null) mapOf("cursor" to cursor) else mapOf()
         )
+        else {
+            logMessage("no token")
+            throw Exception("no token")
+        }/*request(
+            "v2/home/feed/static",
+            if (cursor != null) mapOf("cursor" to cursor) else mapOf()
+        )*/
         val res = call(req.build())
+        logMessage("Tidal Home Response: $res")
         return JSON.decodeFromString(res)
     }
 
